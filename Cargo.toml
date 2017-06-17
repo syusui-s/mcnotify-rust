@@ -1,0 +1,7 @@
+[package]
+name = "mcnotify-rust"
+version = "0.1.0"
+authors = ["Shusui MOYATANI <syusui.s@gmail.com>"]
+
+[dependencies]
+byteorder = "1.0.0"

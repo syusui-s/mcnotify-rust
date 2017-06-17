@@ -1,0 +1,4 @@
+mod minecraft;
+
+fn main() {
+}
