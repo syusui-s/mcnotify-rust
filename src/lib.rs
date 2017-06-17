@@ -1,1 +1,1 @@
-mod minecraft;
+pub mod minecraft;

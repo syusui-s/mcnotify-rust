@@ -1,5 +1,6 @@
 extern crate byteorder;
 
+use std::ops::Deref;
 use std::io::{Cursor, Write};
 use self::byteorder::{BigEndian, WriteBytesExt};
 
@@ -11,13 +12,36 @@ enum Error {
 
 type WriteResult = Result<(), Error>;
 
+#[derive(Debug, PartialEq)]
 enum PacketType {
     HandShake,
 }
 
-struct NoCompressedPacket {
-    packet_id: PacketType,
-    body: Cursor<Vec<u8>>,
+impl Into<i32> for PacketType {
+    fn into(self) -> i32 {
+        use self::PacketType::*;
+
+        match self {
+            HandShake => 0,
+        }
+    }
+}
+
+#[derive(Debug)]
+enum NextState {
+    Status,
+    Login,
+}
+
+impl Into<i32> for NextState {
+    fn into(self) -> i32 {
+        use self::NextState::*;
+
+        match self {
+            Status => 1,
+            Login => 2,
+        }
+    }
 }
 
 macro_rules! write_variable_integer {
@@ -43,7 +67,13 @@ macro_rules! write_variable_integer {
     );
 }
 
-impl NoCompressedPacket {
+#[derive(Debug)]
+struct GeneralPacket {
+    packet_id: PacketType,
+    body: Cursor<Vec<u8>>,
+}
+
+impl GeneralPacket {
     fn new(packet_id: PacketType) -> Self {
         Self {
             packet_id,
@@ -65,7 +95,7 @@ impl NoCompressedPacket {
     }
 
     /// Writes a String to the packet body.
-    fn write_string(&mut self, string: String) -> WriteResult {
+    fn write_string(&mut self, string: &str) -> WriteResult {
         let len = string.len();
 
         if len > 32767 {
@@ -81,34 +111,52 @@ impl NoCompressedPacket {
     }
 }
 
-struct HandShakeBody {
+trait ToGeneralPacket {
+    fn to_general_packet(&self) -> Result<GeneralPacket, Error>;
+}
+
+#[derive(Debug)]
+struct HandShakePacket {
     protocol_version: i32, // VarInt
     server_address: String,
     server_port: u16,
     next_state: i32, // VarInt
 }
 
-impl HandShakeBody {
-    fn new(protocol_version: i32, server_address: &str, server_port: u16) -> Self {
+impl HandShakePacket {
+    fn new(protocol_version: i32, server_address: &str, server_port: u16, next_state: NextState) -> Self {
         Self {
             protocol_version,
             server_address: server_address.to_owned(),
             server_port,
-            next_state: 1
+            next_state: next_state.into()
         }
+    }
+}
+
+impl ToGeneralPacket for HandShakePacket {
+    fn to_general_packet(&self) -> Result<GeneralPacket, Error> {
+        let mut packet = GeneralPacket::new(PacketType::HandShake);
+
+        packet.write_varint(self.protocol_version)?;
+        packet.write_string(self.server_address.deref())?;
+        packet.write_unsigned_short(self.server_port)?;
+        packet.write_varint(self.next_state)?;
+
+        Ok(packet)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::io::{Seek, SeekFrom};
-    use super::{PacketType, NoCompressedPacket};
+    use minecraft::packet::*;
 
     macro_rules! test_write_variable_integer {
         ($name:ident, $f:ident, $cases:tt) => (
             #[test]
             fn $name() {
-                let mut packet = NoCompressedPacket::new(PacketType::HandShake);
+                let mut packet = GeneralPacket::new(PacketType::HandShake);
 
                 let cases = $cases;
                 for &(given, ref expect) in cases.iter() {
@@ -117,11 +165,11 @@ mod tests {
                     assert_eq!(packet.body.get_ref(), expect);
                 }
             }
-        );
+            );
     }
 
     test_write_variable_integer!(
-        test_no_compressed_packet_write_varint,
+        write_varint,
         write_varint,
         [
         (          0_i32, vec![0x00_u8]),
@@ -136,7 +184,7 @@ mod tests {
         ]);
 
     test_write_variable_integer!(
-        test_no_compressed_packet_write_varlong,
+        write_varlong,
         write_varlong,
         [
         (                   0_i64, vec![0x00_u8]),
@@ -153,10 +201,32 @@ mod tests {
         ]);
 
     #[test]
-    fn test_write_unsigned_short() {
-        let mut packet = NoCompressedPacket::new(PacketType::HandShake);
+    fn write_unsigned_short() {
+        let mut packet = GeneralPacket::new(PacketType::HandShake);
 
         packet.write_unsigned_short(517_u16).unwrap();
         assert_eq!(packet.body.get_ref(), &vec![2_u8, 5_u8]);
+    }
+
+    #[test]
+    fn write_string() {
+        let mut packet = GeneralPacket::new(PacketType::HandShake);
+
+        packet.write_string("hello world").unwrap();
+        assert_eq!(
+            packet.body.get_ref(),
+            &vec![11, 0, 104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 0, 119, 0, 111, 0, 114, 0, 108, 0, 100]);
+    }
+
+    #[test]
+    fn handshake_to_general() {
+        let from = HandShakePacket::new(335, "localhost", 25565, NextState::Status);
+        let mut to = GeneralPacket::new(PacketType::HandShake);
+        to.body.write(&[207, 2, 9, 0, 108, 0, 111, 0, 99, 0, 97, 0, 108, 0, 104, 0, 111, 0, 115, 0, 116, 99, 221, 1]).unwrap();
+
+        let converted = from.to_general_packet().unwrap();
+
+        assert_eq!(converted.packet_id, to.packet_id);
+        assert_eq!(converted.body.get_ref(), to.body.get_ref());
     }
 }
