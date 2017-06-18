@@ -1,5 +1,4 @@
 use std::{io, vec, convert};
-use std::clone::Clone;
 use std::io::Write;
 use std::net::{TcpStream, ToSocketAddrs, SocketAddr};
 use super::cursor::WritePacketData;
@@ -9,15 +8,26 @@ use super::packet::*;
 #[derive(Debug)]
 pub enum Error {
     ConnectionError(io::Error),
-    AddressConvertError(&'static str),
-    PacketError(packet::Error)
+    AddressConvertError(String),
+    StateError,
+    PacketError(packet::Error),
+    CursorError(cursor::Error),
+    IoError(io::Error),
 }
 
-impl convert::From<packet::Error> for Error {
-    fn from(err: packet::Error) -> Error {
-        Error::PacketError(err)
-    }
+macro_rules! impl_convert_for_error {
+    ($from:path, $to:path) => (
+        impl convert::From<$from> for Error {
+            fn from(err: $from) -> Error {
+                $to(err)
+            }
+        }
+    );
 }
+
+impl_convert_for_error!(cursor::Error, Error::CursorError);
+impl_convert_for_error!(io::Error, Error::IoError);
+impl_convert_for_error!(packet::Error, Error::PacketError);
 
 /// Server address consists of the pair of hostname and port number
 #[derive(Clone)]
@@ -62,9 +72,9 @@ impl<'a> ToServerAddr for &'a str {
 
         if self.contains(":") {
             let mut iter = self.rsplitn(2, ':');
-            let port_str = iter.next().ok_or(AddressConvertError("invalid port number"))?;
-            let hostname = iter.next().ok_or(AddressConvertError("invalid hostname"))?;
-            let port : u16 = port_str.parse().map_err(|_| AddressConvertError("invalid port number, parse failed"))?;
+            let port_str = iter.next().ok_or(AddressConvertError("invalid port number".to_owned()))?;
+            let hostname = iter.next().ok_or(AddressConvertError("invalid hostname".to_owned()))?;
+            let port : u16 = port_str.parse().map_err(|_| AddressConvertError("invalid port number, parse failed".to_owned()))?;
             Ok(ServerAddr::new(hostname, port))
         } else {
             Ok(ServerAddr::from_hostname(&self))
@@ -72,8 +82,8 @@ impl<'a> ToServerAddr for &'a str {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum State {
-    Connected,
     HandShaking,
 }
 
@@ -89,13 +99,12 @@ impl Client {
         let stream = TcpStream::connect(&server_addr)
             .map_err(|err| Error::ConnectionError(err))?;
 
-        Ok( Client { server_addr, state: State::Connected, stream: stream } )
+        Ok( Client { server_addr, state: State::HandShaking, stream: stream } )
     }
 
     fn write_general_packet(&mut self, packet: &GeneralPacket) -> Result<(), Error> {
-        self.stream.write_varint(packet.packet_id.into());
-        self.stream.write(packet.body.get_ref());
-
+        self.stream.write_varint(packet.packet_id.into())?;
+        self.stream.write(packet.body.get_ref())?;
         Ok(())
     }
 
@@ -104,8 +113,13 @@ impl Client {
     }
 
     pub fn handshake(&mut self) -> Result<(), Error> {
-        let packet = HandShakePacket::new(335, "", 25565, NextState::Status);
+        if self.state != State::HandShaking {
+            return Err(Error::StateError)
+        }
+
+        let packet = HandShakePacket::new(335, &self.server_addr.hostname, self.server_addr.port, NextState::Status);
         self.write_packet(&packet)?;
+
 
         Ok(())
     }

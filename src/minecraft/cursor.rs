@@ -1,7 +1,6 @@
 extern crate byteorder;
 
 use std::{io,convert};
-use std::ops::Deref;
 use std::io::{Write};
 
 use self::byteorder::{BigEndian, WriteBytesExt};
