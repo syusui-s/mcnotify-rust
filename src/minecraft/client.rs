@@ -1,33 +1,31 @@
 use std::{io, vec, convert};
-use std::io::Write;
+use std::io::{Write, Cursor};
 use std::net::{TcpStream, ToSocketAddrs, SocketAddr};
-use super::cursor::WritePacketData;
-use super::{packet,cursor};
+use super::data_rw::WritePacketData;
+use super::{packet,data_rw};
 use super::packet::*;
+
+#[derive(Debug)]
+pub enum StateError {
+    /// state transition is already done
+    AlreadyDone(State),
+    NotSatisfy(State),
+}
 
 #[derive(Debug)]
 pub enum Error {
     ConnectionError(io::Error),
     AddressConvertError(String),
-    StateError,
+    StateError(StateError),
     PacketError(packet::Error),
-    CursorError(cursor::Error),
+    DataRWError(data_rw::Error),
     IoError(io::Error),
 }
 
-macro_rules! impl_convert_for_error {
-    ($from:path, $to:path) => (
-        impl convert::From<$from> for Error {
-            fn from(err: $from) -> Error {
-                $to(err)
-            }
-        }
-    );
-}
-
-impl_convert_for_error!(cursor::Error, Error::CursorError);
+impl_convert_for_error!(data_rw::Error, Error::DataRWError);
 impl_convert_for_error!(io::Error, Error::IoError);
 impl_convert_for_error!(packet::Error, Error::PacketError);
+impl_convert_for_error!(StateError, Error::StateError);
 
 /// Server address consists of the pair of hostname and port number
 #[derive(Clone)]
@@ -85,6 +83,7 @@ impl<'a> ToServerAddr for &'a str {
 #[derive(Debug, PartialEq)]
 pub enum State {
     HandShaking,
+    HandShakeDone,
 }
 
 pub struct Client {
@@ -103,8 +102,16 @@ impl Client {
     }
 
     fn write_general_packet(&mut self, packet: &GeneralPacket) -> Result<(), Error> {
-        self.stream.write_varint(packet.packet_id.into())?;
-        self.stream.write(packet.body.get_ref())?;
+        let mut packet_id_buff = Cursor::new(Vec::with_capacity(5));
+        packet_id_buff.write_varint(packet.packet_id.into())?;
+
+        let packet_id = packet_id_buff.get_ref();
+        let body = packet.body.get_ref();
+        let len = (body.len() + packet_id.len()) as i32;
+
+        self.stream.write_varint(len);
+        self.stream.write(packet_id)?;
+        self.stream.write(body)?;
         Ok(())
     }
 
@@ -114,12 +121,24 @@ impl Client {
 
     pub fn handshake(&mut self) -> Result<(), Error> {
         if self.state != State::HandShaking {
-            return Err(Error::StateError)
+            return Err(Error::from(StateError::AlreadyDone(State::HandShaking)));
         }
 
         let packet = HandShakePacket::new(335, &self.server_addr.hostname, self.server_addr.port, NextState::Status);
         self.write_packet(&packet)?;
 
+        self.state = State::HandShakeDone;
+
+        Ok(())
+    }
+
+    pub fn list(&mut self) -> Result<(), Error> {
+        if self.state == State::HandShaking {
+            self.handshake();
+        }
+
+        let packet = ListRequestPacket::new();
+        self.write_packet(&packet)?;
 
         Ok(())
     }

@@ -1,26 +1,26 @@
 extern crate serde;
 extern crate serde_json;
 
-mod status {
+pub mod status {
     #[derive(Serialize, Deserialize)]
-    struct Version {
+    pub struct Version {
         name: String,
         protocol: i32,
     }
  
     #[derive(Serialize, Deserialize)]
-    struct Players {
+    pub struct Players {
         name: String,
         protocol: i32,
     }
 
     #[derive(Serialize, Deserialize)]
-    struct Description {
+    pub struct Description {
         text: String
     }
 
     #[derive(Serialize, Deserialize)]
-    struct Status {
+    pub struct Status {
         version: Version,
         players: Players,
         description: Description,

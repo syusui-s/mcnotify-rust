@@ -1,23 +1,21 @@
 use std::{io, convert};
 use std::ops::Deref;
-use super::cursor;
-use super::cursor::WritePacketData;
+use super::{data_rw,json_data};
+use super::data_rw::WritePacketData;
 
 #[derive(Debug)]
 pub enum Error {
     InvalidArgument(String),
-    CursorError(cursor::Error),
+    DataRWError(data_rw::Error),
 }
 
-impl convert::From<cursor::Error> for Error {
-    fn from(err: cursor::Error) -> Error {
-        Error::CursorError(err)
-    }
-}
+impl_convert_for_error!(data_rw::Error, Error::DataRWError);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PacketType {
     HandShake,
+    List,
+    PingPong,
 }
 
 impl Into<i32> for PacketType {
@@ -26,6 +24,8 @@ impl Into<i32> for PacketType {
 
         match self {
             HandShake => 0,
+            List => 0,
+            PingPong => 1,
         }
     }
 }
@@ -96,6 +96,32 @@ impl ToGeneralPacket for HandShakePacket {
         Ok(packet)
     }
 }
+
+pub struct ListRequestPacket;
+
+impl ListRequestPacket {
+    pub fn new() -> Self {
+        Self{}
+    }
+}
+
+impl ToGeneralPacket for ListRequestPacket {
+    fn to_general_packet(&self) -> Result<GeneralPacket, Error> {
+        let mut packet = GeneralPacket::new(PacketType::List);
+        Ok(packet)
+    }
+}
+
+pub struct ListResponsePacket {
+    status: json_data::status::Status,
+}
+
+/*
+impl convert::From<GeneralPacket> for ListResponsePacket {
+    fn from(packet: GeneralPacket) -> ListResponsePacket {
+    }
+}
+*/
 
 #[cfg(test)]
 mod tests {
