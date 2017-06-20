@@ -1,19 +1,26 @@
 extern crate byteorder;
 
-use std::{io,convert};
-use std::io::{Write};
+use std::{io,convert,string};
+use std::io::{Read, Write};
 
-use self::byteorder::{BigEndian, WriteBytesExt};
+use self::byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
 
 #[derive(Debug)]
 pub enum Error {
     IoError(io::Error),
-    ArgumentError(&'static str),
+    StringConvertError,
+    VarIntIsTooShort,
+    VarIntIsTooLong,
+    VarLongIsTooShort,
+    VarLongIsTooLong,
+    StringIsTooLong,
 }
 
-impl convert::From<io::Error> for Error {
-    fn from(err: io::Error) -> Error {
-        Error::IoError(err)
+impl_convert_for_error!(io::Error, Error::IoError);
+
+impl convert::From<string::FromUtf16Error> for Error {
+    fn from(err: string::FromUtf16Error) -> Error {
+        Error::StringConvertError
     }
 }
 
@@ -24,6 +31,13 @@ pub trait WritePacketData {
     fn write_varlong(&mut self, i64) -> WriteResult;
     fn write_unsigned_short(&mut self, val: u16) -> WriteResult;
     fn write_string(&mut self, string: &str) -> WriteResult;
+}
+
+pub trait ReadPacketData {
+    fn read_varint(&mut self) -> Result<i32, Error>;
+    fn read_varlong(&mut self) -> Result<i64, Error>;
+    fn read_unsigned_short(&mut self) -> Result<u16, Error>;
+    fn read_string(&mut self) -> Result<String, Error>;
 }
 
 macro_rules! write_variable_integer {
@@ -67,7 +81,7 @@ impl<T> WritePacketData for T where T: Write {
         let len = string.len();
 
         if len > 32767 {
-            return Err(Error::ArgumentError("string length must be <= 32767"));
+            return Err(Error::StringIsTooLong);
         }
 
         self.write_varint(len as i32)?;
@@ -76,6 +90,59 @@ impl<T> WritePacketData for T where T: Write {
         }
 
         Ok(())
+    }
+}
+
+macro_rules! read_variable_integer {
+    ($name:ident, $t:ty, $max_len:expr, $err_too_short:path, $err_too_long:path) => (
+        fn $name(&mut self) -> Result<$t, Error> {
+            let mut bytes = self.bytes();
+            let mut result : $t = 0;
+
+            let mut count = 0;
+            loop {
+                let read = bytes.next().ok_or($err_too_short)??;
+                let value = (read & 0b_0111_1111) as $t;
+                result |= value << (7 * count);
+
+                count += 1;
+                if count > $max_len {
+                    return Err($err_too_long);
+                }
+
+                if (read & 0b_1000_0000) == 0 {
+                    break;
+                }
+            }
+
+            Ok(result)
+        }
+    );
+}
+
+impl<T> ReadPacketData for T where T: Read {
+    read_variable_integer!(read_varint,  i32,  5_i32, Error::VarIntIsTooShort,  Error::VarIntIsTooLong);
+    read_variable_integer!(read_varlong, i64, 10_i64, Error::VarLongIsTooShort, Error::VarLongIsTooLong);
+
+    fn read_unsigned_short(&mut self) -> Result<u16, Error> {
+        Ok(self.read_u16::<BigEndian>()?)
+    }
+
+    fn read_string(&mut self) -> Result<String, Error> {
+        let len = self.read_varint()?;
+
+        if len > 32767 {
+            return Err(Error::StringIsTooLong);
+        } else if len == 0 {
+            return Ok("".to_owned());
+        }
+
+        let mut vec = Vec::<u16>::with_capacity(len as usize);
+        for i in 0..len {
+            vec.push(self.read_unsigned_short()?);
+        }
+
+        Ok(String::from_utf16(vec.as_ref())?)
     }
 }
 
@@ -148,5 +215,14 @@ mod tests {
         assert_eq!(
             cursor.get_ref(),
             &vec![11, 0, 104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 0, 119, 0, 111, 0, 114, 0, 108, 0, 100]);
+    }
+
+    #[test]
+    fn read_string() {
+        let vec = vec![11, 0, 104, 0, 101, 0, 108, 0, 108, 0, 111, 0, 32, 0, 119, 0, 111, 0, 114, 0, 108, 0, 100];
+        let mut cursor = Cursor::new(vec);
+
+        let s = cursor.read_string().unwrap();
+        assert_eq!(s, "hello world".to_owned());
     }
 }

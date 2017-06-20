@@ -119,6 +119,9 @@ impl Client {
         self.write_general_packet(&packet.to_general_packet()?)
     }
 
+    fn read_general_packet(&mut self) {
+    }
+
     pub fn handshake(&mut self) -> Result<(), Error> {
         if self.state != State::HandShaking {
             return Err(Error::from(StateError::AlreadyDone(State::HandShaking)));
