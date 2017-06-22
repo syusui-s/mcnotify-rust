@@ -1,7 +1,7 @@
 use std::{io, vec, convert};
 use std::io::{Write, Cursor};
 use std::net::{TcpStream, ToSocketAddrs, SocketAddr};
-use super::data_rw::WritePacketData;
+use super::data_rw::{ReadPacketData, WritePacketData};
 use super::{packet,data_rw};
 use super::packet::*;
 
@@ -20,6 +20,7 @@ pub enum Error {
     PacketError(packet::Error),
     DataRWError(data_rw::Error),
     IoError(io::Error),
+    InvalidPacketId,
 }
 
 impl_convert_for_error!(data_rw::Error, Error::DataRWError);
@@ -80,10 +81,29 @@ impl<'a> ToServerAddr for &'a str {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum State {
     HandShaking,
     HandShakeDone,
+}
+
+fn detect_packet_type(state: State, id: i32) -> Result<PacketType, Error> {
+    use self::State as S;
+    use self::Error as E;
+    use self::packet::PacketType as PT;
+
+    match id {
+        0 => {
+            Ok(match state {
+                S::HandShaking   => PT::HandShake,
+                S::HandShakeDone => PT::List,
+            })
+        },
+        1 => {
+            Ok(PT::PingPong)
+        },
+        _ => Err(E::InvalidPacketId),
+    }
 }
 
 pub struct Client {
@@ -109,7 +129,7 @@ impl Client {
         let body = packet.body.get_ref();
         let len = (body.len() + packet_id.len()) as i32;
 
-        self.stream.write_varint(len);
+        self.stream.write_varint(len)?;
         self.stream.write(packet_id)?;
         self.stream.write(body)?;
         Ok(())
@@ -119,7 +139,15 @@ impl Client {
         self.write_general_packet(&packet.to_general_packet()?)
     }
 
-    fn read_general_packet(&mut self) {
+    fn read_general_packet(&mut self) -> Result<GeneralPacket, Error> {
+        let len = self.stream.read_varint()?;
+        let packet_id = self.stream.read_varint()?;
+
+        // TODO should get the length on packet_id
+
+        let packet = GeneralPacket::new(detect_packet_type(self.state, packet_id)?);
+
+        Ok(packet)
     }
 
     pub fn handshake(&mut self) -> Result<(), Error> {
@@ -137,7 +165,7 @@ impl Client {
 
     pub fn list(&mut self) -> Result<(), Error> {
         if self.state == State::HandShaking {
-            self.handshake();
+            self.handshake()?;
         }
 
         let packet = ListRequestPacket::new();

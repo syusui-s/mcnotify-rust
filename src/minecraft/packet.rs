@@ -5,7 +5,6 @@ use super::data_rw::WritePacketData;
 
 #[derive(Debug)]
 pub enum Error {
-    InvalidArgument(String),
     DataRWError(data_rw::Error),
 }
 
@@ -107,7 +106,7 @@ impl ListRequestPacket {
 
 impl ToGeneralPacket for ListRequestPacket {
     fn to_general_packet(&self) -> Result<GeneralPacket, Error> {
-        let mut packet = GeneralPacket::new(PacketType::List);
+        let packet = GeneralPacket::new(PacketType::List);
         Ok(packet)
     }
 }

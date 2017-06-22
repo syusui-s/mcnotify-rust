@@ -8,6 +8,6 @@ use minecraft::client::Client;
 
 fn main() {
     let mut cli = Client::connect("127.0.0.1:25565").unwrap();
-    cli.handshake();
-    cli.list();
+    cli.handshake().unwrap();
+    cli.list().unwrap();
 }

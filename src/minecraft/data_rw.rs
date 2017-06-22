@@ -19,7 +19,7 @@ pub enum Error {
 impl_convert_for_error!(io::Error, Error::IoError);
 
 impl convert::From<string::FromUtf16Error> for Error {
-    fn from(err: string::FromUtf16Error) -> Error {
+    fn from(_: string::FromUtf16Error) -> Error {
         Error::StringConvertError
     }
 }
@@ -138,7 +138,7 @@ impl<T> ReadPacketData for T where T: Read {
         }
 
         let mut vec = Vec::<u16>::with_capacity(len as usize);
-        for i in 0..len {
+        for _ in 0..len {
             vec.push(self.read_unsigned_short()?);
         }
 
@@ -150,6 +150,32 @@ impl<T> ReadPacketData for T where T: Read {
 mod tests {
     use std::io::{Seek, SeekFrom, Cursor};
     use super::*;
+
+    const varint_datas : [(i32, &'static [u8]); 9] = [
+        (          0_i32, &[0x00_u8]),
+        (          1_i32, &[0x01_u8]),
+        (          2_i32, &[0x02_u8]),
+        (        127_i32, &[0x7f_u8]),
+        (        128_i32, &[0x80_u8, 0x01_u8]),
+        (        255_i32, &[0xff_u8, 0x01_u8]),
+        ( 2147483647_i32, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8]),
+        (         -1_i32, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x0f_u8]),
+        (-2147483648_i32, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x08_u8]),
+        ];
+
+    const varlong_datas : [(i64, &'static [u8]); 11] = [
+        (                   0_i64, &[0x00_u8]),
+        (                   1_i64, &[0x01_u8]),
+        (                   2_i64, &[0x02_u8]),
+        (                 127_i64, &[0x7f_u8]),
+        (                 128_i64, &[0x80_u8, 0x01_u8]),
+        (                 255_i64, &[0xff_u8, 0x01_u8]),
+        (          2147483647_i64, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8]),
+        ( 9223372036854775807_i64, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x7f]),
+        (                  -1_i64, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x01]),
+        (         -2147483648_i64, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0xf8_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x01]),
+        (-9223372036854775808_i64, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x01]),
+    ];
 
     macro_rules! test_write_variable_integer {
         ($name:ident, $f:ident, $cases:tt) => (
@@ -164,40 +190,27 @@ mod tests {
                     assert_eq!(cursor.get_ref(), expect);
                 }
             }
-            );
+        );
     }
 
-    test_write_variable_integer!(
-        write_varint,
-        write_varint,
-        [
-        (          0_i32, vec![0x00_u8]),
-        (          1_i32, vec![0x01_u8]),
-        (          2_i32, vec![0x02_u8]),
-        (        127_i32, vec![0x7f_u8]),
-        (        128_i32, vec![0x80_u8, 0x01_u8]),
-        (        255_i32, vec![0xff_u8, 0x01_u8]),
-        ( 2147483647_i32, vec![0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8]),
-        (         -1_i32, vec![0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x0f_u8]),
-        (-2147483648_i32, vec![0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x08_u8]),
-        ]);
+    macro_rules! test_read_variable_integer {
+        ($name:ident, $f:ident, $cases:tt) => (
+            #[test]
+            fn $name() {
+                let cases = $cases;
+                for &(expect, ref given) in cases.iter() {
+                    let mut cursor = Cursor::new(&given);
+                    let result = cursor.$f().unwrap();
+                    assert_eq!(result, expect);
+                }
+            }
+        );
+    }
 
-    test_write_variable_integer!(
-        write_varlong,
-        write_varlong,
-        [
-        (                   0_i64, vec![0x00_u8]),
-        (                   1_i64, vec![0x01_u8]),
-        (                   2_i64, vec![0x02_u8]),
-        (                 127_i64, vec![0x7f_u8]),
-        (                 128_i64, vec![0x80_u8, 0x01_u8]),
-        (                 255_i64, vec![0xff_u8, 0x01_u8]),
-        (          2147483647_i64, vec![0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8]),
-        ( 9223372036854775807_i64, vec![0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x7f]),
-        (                  -1_i64, vec![0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x01]),
-        (         -2147483648_i64, vec![0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0xf8_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x01]),
-        (-9223372036854775808_i64, vec![0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x01]),
-        ]);
+    test_write_variable_integer!(write_varint,  write_varint,  varint_datas);
+    test_write_variable_integer!(write_varlong, write_varlong, varlong_datas);
+    test_read_variable_integer!(read_varint,  read_varint,  varint_datas);
+    test_read_variable_integer!(read_varlong, read_varlong, varlong_datas);
 
     #[test]
     fn write_unsigned_short() {
