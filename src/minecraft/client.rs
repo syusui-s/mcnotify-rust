@@ -1,5 +1,5 @@
 use std::{io, vec, convert};
-use std::io::{Write, Cursor};
+use std::io::{Read, Write, Cursor};
 use std::net::{TcpStream, ToSocketAddrs, SocketAddr};
 use super::data_rw::{ReadPacketData, WritePacketData};
 use super::{packet,data_rw};
@@ -140,12 +140,25 @@ impl Client {
     }
 
     fn read_general_packet(&mut self) -> Result<GeneralPacket, Error> {
-        let len = self.stream.read_varint()?;
-        let packet_id = self.stream.read_varint()?;
+        // Length
+        let len_container = self.stream.read_varint()?;
+        let len = len_container.content;
 
-        // TODO should get the length on packet_id
+        if len < 0 {
+            return Err(Error::from(packet::Error::PacketHasNegativeLength));
+        }
 
-        let packet = GeneralPacket::new(detect_packet_type(self.state, packet_id)?);
+        // Packet ID
+        let packet_id_container = self.stream.read_varint()?;
+        let packet_id = packet_id_container.content;
+
+        // Body
+        let body_len = (len as usize) - packet_id_container.read_len;
+        let mut body : Vec<u8> = Vec::with_capacity(body_len);
+        self.stream.read_exact(body.as_mut_slice())?;
+
+        // Construct
+        let packet = GeneralPacket::with_body_vec(detect_packet_type(self.state, packet_id)?, body);
 
         Ok(packet)
     }

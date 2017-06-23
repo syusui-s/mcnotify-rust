@@ -9,6 +9,7 @@ use self::byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
 pub enum Error {
     IoError(io::Error),
     StringConvertError,
+    StringHasNegativeLength,
     VarIntIsTooShort,
     VarIntIsTooLong,
     VarLongIsTooShort,
@@ -24,7 +25,19 @@ impl convert::From<string::FromUtf16Error> for Error {
     }
 }
 
+pub struct ReadContainer<T> {
+    pub content: T,
+    pub read_len: usize
+}
+
+impl<T> ReadContainer<T> {
+    fn new(content: T, read_len: usize) -> Self {
+        Self { content, read_len }
+    }
+}
+
 type WriteResult = Result<(), Error>;
+type ReadResult<T>  = Result<ReadContainer<T>, Error>;
 
 pub trait WritePacketData {
     fn write_varint(&mut self, i32) -> WriteResult;
@@ -34,10 +47,10 @@ pub trait WritePacketData {
 }
 
 pub trait ReadPacketData {
-    fn read_varint(&mut self) -> Result<i32, Error>;
-    fn read_varlong(&mut self) -> Result<i64, Error>;
-    fn read_unsigned_short(&mut self) -> Result<u16, Error>;
-    fn read_string(&mut self) -> Result<String, Error>;
+    fn read_varint(&mut self) -> ReadResult<i32>;
+    fn read_varlong(&mut self) -> ReadResult<i64>;
+    fn read_unsigned_short(&mut self) -> ReadResult<u16>;
+    fn read_string(&mut self) -> ReadResult<String>;
 }
 
 macro_rules! write_variable_integer {
@@ -95,11 +108,11 @@ impl<T> WritePacketData for T where T: Write {
 
 macro_rules! read_variable_integer {
     ($name:ident, $t:ty, $max_len:expr, $err_too_short:path, $err_too_long:path) => (
-        fn $name(&mut self) -> Result<$t, Error> {
+        fn $name(&mut self) -> ReadResult<$t> {
             let mut bytes = self.bytes();
             let mut result : $t = 0;
 
-            let mut count = 0;
+            let mut count : usize = 0;
             loop {
                 let read = bytes.next().ok_or($err_too_short)??;
                 let value = (read & 0b_0111_1111) as $t;
@@ -115,34 +128,41 @@ macro_rules! read_variable_integer {
                 }
             }
 
-            Ok(result)
+            Ok(ReadContainer::new(result, count))
         }
     );
 }
 
 impl<T> ReadPacketData for T where T: Read {
-    read_variable_integer!(read_varint,  i32,  5_i32, Error::VarIntIsTooShort,  Error::VarIntIsTooLong);
-    read_variable_integer!(read_varlong, i64, 10_i64, Error::VarLongIsTooShort, Error::VarLongIsTooLong);
+    read_variable_integer!(read_varint,  i32,  5_usize, Error::VarIntIsTooShort,  Error::VarIntIsTooLong);
+    read_variable_integer!(read_varlong, i64, 10_usize, Error::VarLongIsTooShort, Error::VarLongIsTooLong);
 
-    fn read_unsigned_short(&mut self) -> Result<u16, Error> {
-        Ok(self.read_u16::<BigEndian>()?)
+    fn read_unsigned_short(&mut self) -> ReadResult<u16> {
+        let result = self.read_u16::<BigEndian>()?;
+        Ok(ReadContainer::new(result, 2))
     }
 
-    fn read_string(&mut self) -> Result<String, Error> {
-        let len = self.read_varint()?;
+    fn read_string(&mut self) -> ReadResult<String> {
+        let len_container = self.read_varint()?;
+        let len = len_container.content;
 
         if len > 32767 {
             return Err(Error::StringIsTooLong);
         } else if len == 0 {
-            return Ok("".to_owned());
+            return Ok(ReadContainer::new("".to_owned(), 0));
+        } else if len < 0 {
+            return Err(Error::StringHasNegativeLength)
         }
 
         let mut vec = Vec::<u16>::with_capacity(len as usize);
         for _ in 0..len {
-            vec.push(self.read_unsigned_short()?);
+            vec.push(self.read_unsigned_short()?.content);
         }
 
-        Ok(String::from_utf16(vec.as_ref())?)
+        let result = String::from_utf16(vec.as_ref())?;
+        let read_len : usize = len_container.read_len + (len as usize);
+
+        Ok(ReadContainer::new(result, read_len))
     }
 }
 
@@ -198,10 +218,11 @@ mod tests {
             #[test]
             fn $name() {
                 let cases = $cases;
-                for &(expect, ref given) in cases.iter() {
+                for &(expect, given) in cases.iter() {
                     let mut cursor = Cursor::new(&given);
                     let result = cursor.$f().unwrap();
-                    assert_eq!(result, expect);
+                    assert_eq!(result.content, expect);
+                    assert_eq!(result.read_len, given.len());
                 }
             }
         );
@@ -236,6 +257,6 @@ mod tests {
         let mut cursor = Cursor::new(vec);
 
         let s = cursor.read_string().unwrap();
-        assert_eq!(s, "hello world".to_owned());
+        assert_eq!(s.content, "hello world".to_owned());
     }
 }

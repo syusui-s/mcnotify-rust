@@ -6,6 +6,7 @@ use super::data_rw::WritePacketData;
 #[derive(Debug)]
 pub enum Error {
     DataRWError(data_rw::Error),
+    PacketHasNegativeLength,
 }
 
 impl_convert_for_error!(data_rw::Error, Error::DataRWError);
@@ -45,6 +46,7 @@ impl Into<i32> for NextState {
         }
     }
 }
+
 #[derive(Debug)]
 pub struct GeneralPacket {
     pub packet_id: PacketType,
@@ -58,10 +60,21 @@ impl GeneralPacket {
             body: io::Cursor::new(Vec::new())
         }
     }
+
+    pub fn with_body_vec(packet_id: PacketType, body_vec: Vec<u8>) -> Self {
+        Self {
+            packet_id,
+            body: io::Cursor::new(body_vec)
+        }
+    }
 }
 
 pub trait ToGeneralPacket {
     fn to_general_packet(&self) -> Result<GeneralPacket, Error>;
+}
+
+pub trait FromGeneralPacket<T> {
+    fn from_general_packet(general_packet: &T) -> Result<T, Error>;
 }
 
 #[derive(Debug)]
