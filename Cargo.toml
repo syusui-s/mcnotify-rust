@@ -1,5 +1,5 @@
 [package]
-name = "mcnotify-rust"
+name = "mcnotify"
 version = "0.1.0"
 authors = ["Shusui MOYATANI <syusui.s@gmail.com>"]
 
@@ -8,4 +8,6 @@ byteorder = "1.0.0"
 serde = "1.0.8"
 serde_derive = "1.0.8"
 serde_json = "1.0.2"
+xdg-basedir = "1.0.0"
 toml = "0.4.1"
+clap = "2"

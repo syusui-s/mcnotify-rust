@@ -1,13 +1,15 @@
 #[derive(Deserialize)]
 pub struct Config {
-    pub mcnotify: McNotify,
+    // pub mcnotify: McNotify,
     pub address: Address,
     pub formats: Formats,
 }
 
+/*
 #[derive(Deserialize)]
 pub struct McNotify {
 }
+*/
 
 #[derive(Deserialize)]
 pub struct Address {

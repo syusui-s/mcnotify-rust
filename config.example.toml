@@ -1,0 +1,11 @@
+[address]
+hostname = "localhost"
+port     = 25565
+
+[formats]
+recover_msg = "😄 Server started. Minecraft is available now!"
+dead_msg    = "😴 Server is down. Minecraft is unavailable now."
+join_msg    = "➡️🚪 {0} joined."
+leave_msg   = "🔚🚪 {0} left."
+players_fmt = "Online players: {1} ({0} players)"
+time_fmt    = "[%y-%m-%d %H:%M:%S (%Z)]"

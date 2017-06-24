@@ -52,6 +52,12 @@ pub trait ToServerAddr {
     fn to_server_addr(&self) -> Result<ServerAddr, Error>;
 }
 
+impl ToServerAddr for ServerAddr {
+    fn to_server_addr(&self) -> Result<ServerAddr, Error> {
+        Ok(self.clone())
+    }
+}
+
 /*
 impl ToServerAddr for ServerAddr {
     fn to_server_addr(&self) -> Result<ServerAddr, Error> {
