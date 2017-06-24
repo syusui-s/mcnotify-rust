@@ -1,24 +1,18 @@
 use std::{io, vec, convert};
-use std::io::{Read, Write, Cursor};
 use std::net::{TcpStream, ToSocketAddrs, SocketAddr};
-use super::data_rw::{ReadPacketData, WritePacketData};
-use super::{packet,data_rw};
+use super::{packet,packet_rw,data_rw,state};
+use super::packet_rw::{ReadPacket, WritePacket};
+use super::state::State;
 use super::packet::*;
-
-#[derive(Debug)]
-pub enum StateError {
-    /// state transition is already done
-    AlreadyDone(State),
-    NotSatisfy(State),
-}
 
 #[derive(Debug)]
 pub enum Error {
     ConnectionError(io::Error),
     AddressConvertError(String),
-    StateError(StateError),
-    PacketError(packet::Error),
     DataRWError(data_rw::Error),
+    PacketError(packet::Error),
+    PacketRWError(packet_rw::Error),
+    StateError(state::Error),
     IoError(io::Error),
     InvalidPacketId,
 }
@@ -26,7 +20,8 @@ pub enum Error {
 impl_convert_for_error!(data_rw::Error, Error::DataRWError);
 impl_convert_for_error!(io::Error, Error::IoError);
 impl_convert_for_error!(packet::Error, Error::PacketError);
-impl_convert_for_error!(StateError, Error::StateError);
+impl_convert_for_error!(packet_rw::Error, Error::PacketRWError);
+impl_convert_for_error!(state::Error, Error::StateError);
 
 /// Server address consists of the pair of hostname and port number
 #[derive(Clone)]
@@ -81,31 +76,6 @@ impl<'a> ToServerAddr for &'a str {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum State {
-    HandShaking,
-    HandShakeDone,
-}
-
-fn detect_packet_type(state: State, id: i32) -> Result<PacketType, Error> {
-    use self::State as S;
-    use self::Error as E;
-    use self::packet::PacketType as PT;
-
-    match id {
-        0 => {
-            Ok(match state {
-                S::HandShaking   => PT::HandShake,
-                S::HandShakeDone => PT::List,
-            })
-        },
-        1 => {
-            Ok(PT::PingPong)
-        },
-        _ => Err(E::InvalidPacketId),
-    }
-}
-
 pub struct Client {
     server_addr: ServerAddr,
     state: State,
@@ -118,72 +88,34 @@ impl Client {
         let stream = TcpStream::connect(&server_addr)
             .map_err(|err| Error::ConnectionError(err))?;
 
+        stream.set_read_timeout(None)?;
+
         Ok( Client { server_addr, state: State::HandShaking, stream: stream } )
     }
 
-    fn write_general_packet(&mut self, packet: &GeneralPacket) -> Result<(), Error> {
-        let mut packet_id_buff = Cursor::new(Vec::with_capacity(5));
-        packet_id_buff.write_varint(packet.packet_id.into())?;
-
-        let packet_id = packet_id_buff.get_ref();
-        let body = packet.body.get_ref();
-        let len = (body.len() + packet_id.len()) as i32;
-
-        self.stream.write_varint(len)?;
-        self.stream.write(packet_id)?;
-        self.stream.write(body)?;
-        Ok(())
-    }
-
-    fn write_packet<T: ToGeneralPacket>(&mut self, packet: &T) -> Result<(), Error> {
-        self.write_general_packet(&packet.to_general_packet()?)
-    }
-
-    fn read_general_packet(&mut self) -> Result<GeneralPacket, Error> {
-        // Length
-        let len_container = self.stream.read_varint()?;
-        let len = len_container.content;
-
-        if len < 0 {
-            return Err(Error::from(packet::Error::PacketHasNegativeLength));
-        }
-
-        // Packet ID
-        let packet_id_container = self.stream.read_varint()?;
-        let packet_id = packet_id_container.content;
-
-        // Body
-        let body_len = (len as usize) - packet_id_container.read_len;
-        let mut body : Vec<u8> = Vec::with_capacity(body_len);
-        self.stream.read_exact(body.as_mut_slice())?;
-
-        // Construct
-        let packet = GeneralPacket::with_body_vec(detect_packet_type(self.state, packet_id)?, body);
-
-        Ok(packet)
-    }
-
-    pub fn handshake(&mut self) -> Result<(), Error> {
+    pub fn handshake(&mut self, next_state: NextState) -> Result<(), Error> {
         if self.state != State::HandShaking {
-            return Err(Error::from(StateError::AlreadyDone(State::HandShaking)));
+            return Err(Error::from(state::Error::AlreadyDone(State::HandShaking)));
         }
 
-        let packet = HandShakePacket::new(335, &self.server_addr.hostname, self.server_addr.port, NextState::Status);
-        self.write_packet(&packet)?;
+        let packet = HandShakePacket::new(335, &self.server_addr.hostname, self.server_addr.port, next_state);
+        self.stream.write_packet(&packet)?;
 
         self.state = State::HandShakeDone;
 
         Ok(())
     }
 
-    pub fn list(&mut self) -> Result<(), Error> {
+    pub fn list(&mut self) -> Result<ListResponsePacket, Error> {
         if self.state == State::HandShaking {
-            self.handshake()?;
+            self.handshake(NextState::Status)?;
         }
 
         let packet = ListRequestPacket::new();
-        self.write_packet(&packet)?;
+        self.stream.write_packet(&packet)?;
 
-        Ok(())
+        let packet = self.stream.read_packet::<ListResponsePacket>(self.state)?;
+
+        Ok(packet)
     }
 }

@@ -1,15 +1,25 @@
+extern crate serde;
+extern crate serde_json;
+
 use std::{io, convert};
 use std::ops::Deref;
 use super::{data_rw,json_data};
-use super::data_rw::WritePacketData;
+use super::data_rw::{WritePacketData, ReadPacketData};
+
+/// * defines packet structure
+/// * defines methods for each packet
+/// * defines some enums for packets
+/// * general packet to specific packet conversion
+/// * specific packet to general packet conversion
 
 #[derive(Debug)]
 pub enum Error {
     DataRWError(data_rw::Error),
-    PacketHasNegativeLength,
+    JsonError(serde_json::Error),
 }
 
 impl_convert_for_error!(data_rw::Error, Error::DataRWError);
+impl_convert_for_error!(serde_json::Error, Error::JsonError);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PacketType {
@@ -18,7 +28,7 @@ pub enum PacketType {
     PingPong,
 }
 
-impl Into<i32> for PacketType {
+impl convert::Into<i32> for PacketType {
     fn into(self) -> i32 {
         use self::PacketType::*;
 
@@ -36,7 +46,7 @@ pub enum NextState {
     Login,
 }
 
-impl Into<i32> for NextState {
+impl convert::Into<i32> for NextState {
     fn into(self) -> i32 {
         use self::NextState::*;
 
@@ -62,10 +72,7 @@ impl GeneralPacket {
     }
 
     pub fn with_body_vec(packet_id: PacketType, body_vec: Vec<u8>) -> Self {
-        Self {
-            packet_id,
-            body: io::Cursor::new(body_vec)
-        }
+        Self { packet_id, body: io::Cursor::new(body_vec) }
     }
 }
 
@@ -73,8 +80,8 @@ pub trait ToGeneralPacket {
     fn to_general_packet(&self) -> Result<GeneralPacket, Error>;
 }
 
-pub trait FromGeneralPacket<T> {
-    fn from_general_packet(general_packet: &T) -> Result<T, Error>;
+pub trait FromGeneralPacket where Self: Sized {
+    fn from_general_packet(general_packet: &mut GeneralPacket) -> Result<Self, Error>;
 }
 
 #[derive(Debug)]
@@ -113,7 +120,7 @@ pub struct ListRequestPacket;
 
 impl ListRequestPacket {
     pub fn new() -> Self {
-        Self{}
+        Self { }
     }
 }
 
@@ -128,12 +135,23 @@ pub struct ListResponsePacket {
     status: json_data::status::Status,
 }
 
-/*
-impl convert::From<GeneralPacket> for ListResponsePacket {
-    fn from(packet: GeneralPacket) -> ListResponsePacket {
+impl ListResponsePacket {
+    pub fn new(status: json_data::status::Status) -> Self {
+        Self { status }
+    }
+
+    pub fn get_status(&self) -> &json_data::status::Status {
+        &self.status
     }
 }
-*/
+
+impl FromGeneralPacket for ListResponsePacket {
+    fn from_general_packet(general_packet: &mut GeneralPacket) -> Result<Self, Error> {
+        let body_string = general_packet.body.read_string()?.content;
+        let status: json_data::status::Status = serde_json::from_str(body_string.as_str()).unwrap();
+        Ok(ListResponsePacket::new(status))
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -144,7 +162,7 @@ mod tests {
     fn handshake_to_general() {
         let from = HandShakePacket::new(335, "localhost", 25565, NextState::Status);
         let mut to = GeneralPacket::new(PacketType::HandShake);
-        to.body.write(&[207, 2, 9, 0, 108, 0, 111, 0, 99, 0, 97, 0, 108, 0, 104, 0, 111, 0, 115, 0, 116, 99, 221, 1]).unwrap();
+        to.body.write(&[207, 2, 9, 108, 111, 99, 97, 108, 104, 111, 115, 116, 99, 221, 1]).unwrap();
 
         let converted = from.to_general_packet().unwrap();
 

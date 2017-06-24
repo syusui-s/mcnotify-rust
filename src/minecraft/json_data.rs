@@ -5,13 +5,26 @@ pub mod status {
     #[derive(Serialize, Deserialize)]
     pub struct Version {
         name: String,
-        protocol: i32,
+        protocol: u32,
     }
- 
+
+    impl Version {
+        pub fn get_name(&self) -> String {
+            self.name.clone()
+        }
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Player {
+        name: String,
+        id: String,
+    }
+
     #[derive(Serialize, Deserialize)]
     pub struct Players {
-        name: String,
-        protocol: i32,
+        max: u32,
+        online: u32,
+        sample: Option<Vec<Player>>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -21,8 +34,22 @@ pub mod status {
 
     #[derive(Serialize, Deserialize)]
     pub struct Status {
-        version: Version,
-        players: Players,
         description: Description,
+        players: Players,
+        version: Version,
+    }
+
+    impl Status {
+        pub fn get_version(&self) -> &Version {
+            &self.version
+        }
+
+        pub fn get_players(&self) -> &Players {
+            &self.players
+        }
+
+        pub fn get_description(&self) -> &Description {
+            &self.description
+        }
     }
 }
