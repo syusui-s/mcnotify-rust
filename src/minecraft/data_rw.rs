@@ -5,9 +5,12 @@ use std::io::{Read, Write};
 
 use self::byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
 
+pub const STRING_MAX : usize = 32767;
+
 #[derive(Debug)]
 pub enum Error {
     IoError(io::Error),
+    MaxStringLenIsTooLong,
     StringConvertError,
     StringHasInvalidLength,
     StringHasInvalidCharacter,
@@ -55,6 +58,7 @@ pub trait ReadPacketData {
     fn read_byte(&mut self) -> ReadResult<u8>;
     fn read_unsigned_short(&mut self) -> ReadResult<u16>;
     fn read_unsigned_int(&mut self) -> ReadResult<u32>;
+    fn read_string_with_max_len(&mut self, max_len: usize) -> ReadResult<String>;
     fn read_string(&mut self) -> ReadResult<String>;
 }
 
@@ -171,10 +175,18 @@ impl<T> ReadPacketData for T where T: Read {
     }
 
     fn read_string(&mut self) -> ReadResult<String> {
-        let len_container = self.read_varint()?;
-        let len = len_container.content;
+        self.read_string_with_max_len(STRING_MAX)
+    }
 
-        if len > 32767 {
+    fn read_string_with_max_len(&mut self, max_len: usize) -> ReadResult<String> {
+        let len_container = self.read_varint()?;
+        let len = len_container.content as usize;
+
+        if max_len > STRING_MAX {
+            return Err(Error::MaxStringLenIsTooLong)
+        }
+
+        if (len > max_len) || (len > STRING_MAX) {
             return Err(Error::StringIsTooLong);
         } else if len <= 0 {
             return Err(Error::StringHasInvalidLength);
@@ -222,6 +234,11 @@ mod tests {
         (         -2147483648_i64, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0xf8_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x01]),
         (-9223372036854775808_i64, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x01]),
     ];
+
+    const STRING_DATA : (&'static str, &'static [u8]) = (
+        "hello world😆",
+        &[15, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 240, 159, 152, 134]
+    );
 
     macro_rules! test_write_variable_integer {
         ($name:ident, $f:ident, $cases:tt) => (
@@ -277,10 +294,19 @@ mod tests {
 
     #[test]
     fn read_string() {
-        let vec = vec![15, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 240, 159, 152, 134];
-        let mut cursor = Cursor::new(vec);
+        let (expected, given) = STRING_DATA;
+        let mut cursor = Cursor::new(given);
 
         let s = cursor.read_string().unwrap();
-        assert_eq!(s.content, "hello world😆".to_owned());
+        assert_eq!(s.content.as_str(), expected);
+    }
+
+    #[test]
+    fn read_string_with_max_len() {
+        let (expected, given) = STRING_DATA;
+        let mut cursor = Cursor::new(given);
+
+        let s = cursor.read_string_with_max_len(expected.len()).unwrap();
+        assert_eq!(s.content.as_str(), expected);
     }
 }
