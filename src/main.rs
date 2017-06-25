@@ -1,11 +1,18 @@
+#[macro_use]
+extern crate serde_derive;
+
 extern crate getopts;
-extern crate mcnotify;
+
+#[macro_use]
+pub mod util;
+pub mod config;
+pub mod config_loader;
+pub mod minecraft;
 
 use std::{env, process, io};
 use std::path::{Path, PathBuf};
 use std::io::Write;
 use getopts::Options;
-use mcnotify::{minecraft, config_loader};
 use minecraft::client::Client;
 use minecraft::client::ServerAddr;
 
