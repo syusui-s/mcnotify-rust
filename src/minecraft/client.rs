@@ -1,6 +1,6 @@
 use std::{io, vec, convert};
 use std::net::{TcpStream, ToSocketAddrs, SocketAddr};
-use super::{packet,packet_rw,data_rw,state};
+use super::{packet,packet_rw,data_rw,state,json_data};
 use super::packet_rw::{ReadPacket, WritePacket};
 use super::state::State;
 use super::packet::*;
@@ -100,11 +100,13 @@ impl Client {
     }
 
     pub fn handshake(&mut self, next_state: NextState) -> Result<(), Error> {
+        const SUPPORTED_VERSION : i32 = 335;
+
         if self.state != State::HandShaking {
             return Err(Error::from(state::Error::AlreadyDone(State::HandShaking)));
         }
 
-        let packet = HandShakePacket::new(335, &self.server_addr.hostname, self.server_addr.port, next_state);
+        let packet = HandShakePacket::new(SUPPORTED_VERSION, &self.server_addr.hostname, self.server_addr.port, next_state);
         self.stream.write_packet(&packet)?;
 
         self.state = State::HandShakeDone;
@@ -112,7 +114,7 @@ impl Client {
         Ok(())
     }
 
-    pub fn list(&mut self) -> Result<ListResponsePacket, Error> {
+    pub fn list(&mut self) -> Result<json_data::status::Status, Error> {
         if self.state == State::HandShaking {
             self.handshake(NextState::Status)?;
         }
@@ -121,7 +123,8 @@ impl Client {
         self.stream.write_packet(&packet)?;
 
         let packet = self.stream.read_packet::<ListResponsePacket>(self.state)?;
+        let status = packet.status;
 
-        Ok(packet)
+        Ok(status)
     }
 }

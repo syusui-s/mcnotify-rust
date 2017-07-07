@@ -1,11 +1,20 @@
+## mcnotify configurations
+[mcnotify]
+check_interval = 60 # (sec) status check interval
+
+## minecraft server configurations
 [address]
 hostname = "localhost"
 port     = 25565
 
+## message format configurations
 [formats]
+# the message format when the server starts or recovers from a stopped state.
 recover_msg = "😄 Server started. Minecraft is available now!"
-dead_msg    = "😴 Server is down. Minecraft is unavailable now."
-join_msg    = "➡️🚪 {0} joined."
-leave_msg   = "🔚🚪 {0} left."
-players_fmt = "Online players: {1} ({0} players)"
+# the message format when the server stops.
+down_msg    = "😴 Server is down. Minecraft is unavailable now."
+# the message format when some player joins or leaves.
+join_fmt    = "➡️ {players} joined."
+leave_fmt   = "🔚{players} left."
+players_fmt = "Online players: {players} ({count} players)"
 time_fmt    = "[%y-%m-%d %H:%M:%S (%Z)]"

@@ -3,53 +3,33 @@ extern crate serde_json;
 
 pub mod status {
     #[derive(Serialize, Deserialize)]
+    pub struct Status {
+        pub version: Version,
+        pub description: Description,
+        pub players: Players,
+    }
+
+    #[derive(Serialize, Deserialize)]
     pub struct Version {
-        name: String,
-        protocol: u32,
-    }
-
-    impl Version {
-        pub fn get_name(&self) -> String {
-            self.name.clone()
-        }
-    }
-
-    #[derive(Serialize, Deserialize)]
-    pub struct Player {
-        name: String,
-        id: String,
-    }
-
-    #[derive(Serialize, Deserialize)]
-    pub struct Players {
-        max: u32,
-        online: u32,
-        sample: Option<Vec<Player>>,
+        pub name: String,
+        pub protocol: u32,
     }
 
     #[derive(Serialize, Deserialize)]
     pub struct Description {
-        text: String
+        pub text: String
     }
 
-    #[derive(Serialize, Deserialize)]
-    pub struct Status {
-        description: Description,
-        players: Players,
-        version: Version,
+    #[derive(Serialize, Deserialize, Clone, PartialEq)]
+    pub struct Player {
+        pub name: String,
+        pub id: String,
     }
 
-    impl Status {
-        pub fn get_version(&self) -> &Version {
-            &self.version
-        }
-
-        pub fn get_players(&self) -> &Players {
-            &self.players
-        }
-
-        pub fn get_description(&self) -> &Description {
-            &self.description
-        }
+    #[derive(Serialize, Deserialize, Clone)]
+    pub struct Players {
+        pub max: u32,
+        pub online: u32,
+        pub sample: Option<Vec<Player>>,
     }
 }

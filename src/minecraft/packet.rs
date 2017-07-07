@@ -132,7 +132,7 @@ impl ToGeneralPacket for ListRequestPacket {
 }
 
 pub struct ListResponsePacket {
-    status: json_data::status::Status,
+    pub status: json_data::status::Status,
 }
 
 impl ListResponsePacket {
@@ -140,7 +140,7 @@ impl ListResponsePacket {
         Self { status }
     }
 
-    pub fn get_status(&self) -> &json_data::status::Status {
+    pub fn status(&self) -> &json_data::status::Status {
         &self.status
     }
 }

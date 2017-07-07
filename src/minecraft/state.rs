@@ -10,6 +10,8 @@ pub enum Error {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum State {
+    Disconnected,
+    Connected,
     HandShaking,
     HandShakeDone,
 }
@@ -21,10 +23,12 @@ impl State {
 
         match id {
             0 => {
-                Ok(match *self {
-                    State::HandShaking   => PT::HandShake,
-                    State::HandShakeDone => PT::List,
-                })
+                match *self {
+                    State::Disconnected  => Err(E::NotSatisfy(State::Connected)),
+                    State::Connected     => Err(E::InvalidPacketId),
+                    State::HandShaking   => Ok(PT::HandShake),
+                    State::HandShakeDone => Ok(PT::List),
+                }
             },
             1 => {
                 Ok(PT::PingPong)

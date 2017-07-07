@@ -1,20 +1,36 @@
 #[macro_use]
 extern crate serde_derive;
-
 extern crate getopts;
+extern crate strfmt;
+extern crate egg_mode;
 
 #[macro_use]
 pub mod util;
 pub mod config;
 pub mod config_loader;
 pub mod minecraft;
+pub mod notifier;
+pub mod status_checker;
 
-use std::{env, process, io};
+use std::{env, process, io, thread};
 use std::path::{Path, PathBuf};
 use std::io::Write;
 use getopts::Options;
-use minecraft::client::Client;
-use minecraft::client::ServerAddr;
+use notifier::twitter_eggmode::TwitterEggMode;
+use status_checker::Status::{Available, Unavailable};
+
+fn print_usage(program_name: &str, opts: &Options) {
+    let pathbuf = PathBuf::from(program_name);
+    let filename = pathbuf.file_name().unwrap().to_str().unwrap();
+    let brief = format!("Usage: {} [OPTIONS]\nMinecraft status notifier", filename);
+    print!("{}", opts.usage(&brief));
+}
+
+fn print_version(program_name: &str) {
+    println!("{} {}",
+             program_name,
+             env!("CARGO_PKG_VERSION"));
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -28,7 +44,7 @@ fn main() {
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => {
-            writeln!(&mut io::stderr(), "{}", f.to_string()).unwrap();
+            writeln!(&mut io::stderr(), "Option parse error: {}", f.to_string()).unwrap();
             process::exit(1);
         },
     };
@@ -45,31 +61,80 @@ fn main() {
 
     // load config
     let config_loader = config_loader::ConfigLoader::new();
-    let config = (if let Some(custom_conf) = matches.opt_str("config") {
-             config_loader.read_config_from_path(Path::new(&custom_conf))
-         } else {
-             config_loader.read_config()
-         })
-        .expect("Couldn't load the configuration file...");
+    let config_result =
+        match matches.opt_str("config") {
+            Some(custom_conf) =>
+                config_loader.read_config_from_path(Path::new(&custom_conf)),
+            None =>
+                config_loader.read_config(),
+        };
 
-    let address = ServerAddr::new(config.address.hostname.as_str(), config.address.port);
+    let config = config_result
+        .expect("Couldn't load the configuration...");
 
-    let mut cli = Client::connect(address).expect("Couldn't connect the server...");
-    let res = cli.list().unwrap();
+    let strategy = TwitterEggMode::new(
+        config.twitter.consumer_key.as_str(),
+        config.twitter.consumer_secret.as_str(),
+        config.twitter.access_key.as_str(),
+        config.twitter.access_secret.as_str()
+    );
 
-    println!("{}", res.get_status().get_version().get_name());
-}
+    let formats = config.formats;
+    let formatter = notifier::MessageFormatter {
+        recover_msg: formats.recover_msg,
+        down_msg:    formats.down_msg,
+        join_fmt:    formats.join_fmt,
+        leave_fmt:   formats.leave_fmt,
+        players_fmt: formats.players_fmt,
+        time_fmt:    formats.time_fmt,
+    };
 
-fn print_usage(program_name: &str, opts: &Options) {
-    let pathbuf = PathBuf::from(program_name);
-    let filename = pathbuf.file_name().unwrap().to_str().unwrap();
-    let brief = format!(
-r#"Usage: {} [OPTIONS]
-Minecraft status notifier"#,
-filename);
-    print!("{}", opts.usage(&brief));
-}
+    let notifier = notifier::Notifier::new(strategy, formatter);
 
-fn print_version(program_name: &str) {
-    println!("{} {}", program_name, env!("CARGO_PKG_VERSION"));
+    let interval = std::time::Duration::from_secs(config.mcnotify.check_interval as u64);
+    let mut status_checker = status_checker::StatusChecker::new(config.address.hostname.as_str(), config.address.port);
+    let mut last_status = status_checker::Status::unavailable("On start");
+
+    println!("Start checking.");
+
+    loop {
+        let status = status_checker.check_status();
+        let message_opt = match status {
+            Unavailable { ref reason } => {
+                writeln!(&mut io::stderr(), "{}", reason).unwrap();
+                match last_status {
+                    Available { .. } => Some(notifier::Message::Down {}),
+                    _                => None,
+                }
+            },
+            Available { online_count, ref current_players, ref joined_players, ref left_players } => {
+                if let Unavailable { .. } = last_status {
+                    Some(notifier::Message::Recover {
+                        online_count,
+                        current_players: current_players,
+                    })
+                } else if ! joined_players.is_empty() || ! left_players.is_empty() {
+                    Some(notifier::Message::PlayerChange {
+                        online_count,
+                        current_players: current_players,
+                        joined_players: joined_players,
+                        left_players: left_players,
+                    })
+                } else {
+                    None
+                }
+            }
+        };
+
+        if let Some(msg) = message_opt {
+            let notify_result = notifier.notify(&msg);
+
+            if let Err(e) = notify_result {
+                writeln!(&mut io::stderr(), "Failed to notify. {:?}", e).unwrap();
+            }
+        }
+
+        last_status = status.clone();
+        thread::sleep(interval);
+    }
 }
