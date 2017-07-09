@@ -18,3 +18,11 @@ join_fmt    = "➡️ {players} joined."
 leave_fmt   = "🔚{players} left."
 players_fmt = "Online players: {players} ({count} players)"
 time_fmt    = "[%y-%m-%d %H:%M:%S (%Z)]"
+
+# If you want to get notifications on Twitter,
+# configure this section.
+[twitter]
+consumer_token = ""
+consumer_key   = ""
+access_token   = ""
+access_key     = ""
