@@ -80,7 +80,7 @@ fn main() {
     );
 
     let formats = config.formats;
-    let formatter = notifier::MessageFormatter {
+    let formatter = notifier::MessageFormat {
         recover_msg: formats.recover_msg,
         down_msg:    formats.down_msg,
         join_fmt:    formats.join_fmt,

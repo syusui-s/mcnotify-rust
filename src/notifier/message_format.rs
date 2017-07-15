@@ -4,22 +4,21 @@ extern crate chrono;
 use std::convert;
 use std::collections::HashMap;
 use strfmt::Format;
-use super::message::Message;
-use super::message::Message::*;
+use notifier::Message;
+use notifier::Message::*;
 
 #[derive(Debug)]
 pub enum Error {
-    MessageFormatError(String),
+    FormatError(String),
 }
 
 impl convert::From<strfmt::FmtError> for Error {
-    fn from(err: strfmt::FmtError) -> Error {
-        let message = err.to_string();
-        Error::MessageFormatError(message)
+    fn from(from: strfmt::FmtError) -> Error {
+        Error::FormatError(from.to_string())
     }
 }
 
-pub struct MessageFormatter {
+pub struct MessageFormat {
     pub recover_msg: String,
     pub down_msg: String,
     pub join_fmt: String,
@@ -28,29 +27,17 @@ pub struct MessageFormatter {
     pub time_fmt: String,
 }
 
-impl MessageFormatter {
+impl MessageFormat {
     pub fn format(&self, message: &Message) -> Result<String, Error> {
         let mut buffer = String::with_capacity(560); // 140 chars * 4 bytes
 
-        if ! self.time_fmt.is_empty() {
-            let current_time = chrono::Local::now();
-            let formatted_time = current_time.format(self.time_fmt.as_str());
-            buffer.push_str(formatted_time.to_string().as_str());
-            buffer.push('\n');
-        }
+        self.format_time(&mut buffer);
 
         // join / leave
         match message {
             &PlayerChange { joined_players, left_players, .. } => {
-                if ! joined_players.is_empty() {
-                    self.format_join(&mut buffer, joined_players)?;
-                    buffer.push('\n');
-                }
-
-                if ! left_players.is_empty() {
-                    self.format_leave(&mut buffer, left_players)?;
-                    buffer.push('\n');
-                }
+                self.format_join(&mut buffer, joined_players)?;
+                self.format_leave(&mut buffer, left_players)?;
             }
             &Recover { .. } => {
                 buffer.push_str(self.recover_msg.as_str());
@@ -73,12 +60,29 @@ impl MessageFormatter {
         Ok(buffer)
     }
 
+    fn format_time(&self, buffer: &mut String) {
+        if ! self.time_fmt.is_empty() {
+            let current_time = chrono::Local::now();
+            let formatted_time = current_time.format(self.time_fmt.as_str());
+            buffer.push_str(formatted_time.to_string().as_str());
+            buffer.push('\n');
+        }
+    }
+
     fn format_join(&self, buffer: &mut String, players: &Vec<String>) -> Result<(), Error> {
-        Self::build_players(buffer, self.join_fmt.as_str(), players)
+        if ! players.is_empty() {
+            Self::build_players(buffer, self.join_fmt.as_str(), players)?;
+            buffer.push('\n');
+        }
+        Ok(())
     }
 
     fn format_leave(&self, buffer: &mut String, players: &Vec<String>) -> Result<(), Error> {
-        Self::build_players(buffer, self.leave_fmt.as_str(), players)
+        if ! players.is_empty() {
+            Self::build_players(buffer, self.leave_fmt.as_str(), players)?;
+            buffer.push('\n');
+        }
+        Ok(())
     }
 
     fn format_current_players(&self, buffer: &mut String, online_count: u32, players: &Vec<String>) -> Result<(), Error> {
@@ -107,8 +111,8 @@ impl MessageFormatter {
 mod tests {
     use super::*;
 
-    fn setup_formatter() -> MessageFormatter {
-        let formatter = MessageFormatter {
+    fn setup_format() -> MessageFormat {
+        let format = MessageFormat {
             recover_msg: "recovered".to_owned(),
             down_msg:    "down".to_owned(),
             join_fmt:    "{players}".to_owned(),
@@ -117,12 +121,12 @@ mod tests {
             time_fmt:    "[]".to_owned(),
         };
 
-        formatter
+        format
     }
 
     #[test]
-    fn message_formatter_player_change() {
-        let formatter = setup_formatter();
+    fn message_format_player_change() {
+        let format = setup_format();
 
         let recover = Message::PlayerChange {
             online_count: 3,
@@ -140,12 +144,12 @@ mod tests {
             ],
         };
 
-        assert_eq!(formatter.format(&recover).unwrap().as_str(), "[]\nA, B\nD\nA, B, C 3");
+        assert_eq!(format.format(&recover).unwrap().as_str(), "[]\nA, B\nD\nA, B, C 3");
     }
 
     #[test]
-    fn message_formatter_recover() {
-        let formatter = setup_formatter();
+    fn message_format_recover() {
+        let format = setup_format();
 
         let message = Message::Recover {
             online_count: 3,
@@ -156,14 +160,14 @@ mod tests {
             ],
         };
 
-        assert_eq!(formatter.format(&message).unwrap().as_str(), "[]\nrecovered\nA, B, C 3");
+        assert_eq!(format.format(&message).unwrap().as_str(), "[]\nrecovered\nA, B, C 3");
     }
 
     #[test]
-    fn message_formatter_down() {
-        let formatter = setup_formatter();
+    fn message_format_down() {
+        let format = setup_format();
 
         let message = Message::Down;
-        assert_eq!(formatter.format(&message).unwrap().as_str(), "[]\ndown");
+        assert_eq!(format.format(&message).unwrap().as_str(), "[]\ndown");
     }
 }

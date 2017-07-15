@@ -1,6 +1,6 @@
 use std::convert;
 use super::Message;
-use super::{MessageFormatter, MessageFormatError};
+use super::{MessageFormat, MessageFormatError};
 
 #[derive(Debug)]
 pub enum Error {
@@ -17,16 +17,16 @@ pub trait NotifierStrategy {
 
 pub struct Notifier<S> where S: NotifierStrategy {
     strategy: S,
-    formatter: MessageFormatter,
+    format: MessageFormat,
 }
 
 impl<S> Notifier<S> where S: NotifierStrategy {
-    pub fn new(strategy: S, formatter: MessageFormatter) -> Self {
-        Self { strategy, formatter }
+    pub fn new(strategy: S, format: MessageFormat) -> Self {
+        Self { strategy, format }
     }
 
     pub fn notify(&self, message: &Message) -> Result<(), Error> {
-        self.strategy.post_message(self.formatter.format(message)?.as_str())?;
+        self.strategy.post_message(self.format.format(message)?.as_str())?;
         Ok(())
     }
 }
