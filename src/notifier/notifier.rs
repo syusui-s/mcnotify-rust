@@ -26,7 +26,7 @@ impl<S> Notifier<S> where S: NotifierStrategy {
     }
 
     pub fn notify(&self, message: &Message) -> Result<(), Error> {
-        self.strategy.post_message(self.format.format(message)?.as_str())?;
+        self.strategy.post_message(&self.format.format(message)?)?;
         Ok(())
     }
 }

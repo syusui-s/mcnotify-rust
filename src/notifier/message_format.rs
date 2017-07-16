@@ -1,5 +1,5 @@
-extern crate strfmt;
 extern crate chrono;
+extern crate strfmt;
 
 use std::convert;
 use std::collections::HashMap;
@@ -40,11 +40,11 @@ impl MessageFormat {
                 self.format_leave(&mut buffer, left_players)?;
             }
             &Recover { .. } => {
-                buffer.push_str(self.recover_msg.as_str());
+                buffer.push_str(&self.recover_msg);
                 buffer.push('\n');
             },
             &Down { } => {
-                buffer.push_str(self.down_msg.as_str());
+                buffer.push_str(&self.down_msg);
             },
         }
 
@@ -63,15 +63,15 @@ impl MessageFormat {
     fn format_time(&self, buffer: &mut String) {
         if ! self.time_fmt.is_empty() {
             let current_time = chrono::Local::now();
-            let formatted_time = current_time.format(self.time_fmt.as_str());
-            buffer.push_str(formatted_time.to_string().as_str());
+            let formatted_time = current_time.format(&self.time_fmt);
+            buffer.push_str(&formatted_time.to_string());
             buffer.push('\n');
         }
     }
 
     fn format_join(&self, buffer: &mut String, players: &Vec<String>) -> Result<(), Error> {
         if ! players.is_empty() {
-            Self::build_players(buffer, self.join_fmt.as_str(), players)?;
+            Self::build_players(buffer, &self.join_fmt, players)?;
             buffer.push('\n');
         }
         Ok(())
@@ -79,7 +79,7 @@ impl MessageFormat {
 
     fn format_leave(&self, buffer: &mut String, players: &Vec<String>) -> Result<(), Error> {
         if ! players.is_empty() {
-            Self::build_players(buffer, self.leave_fmt.as_str(), players)?;
+            Self::build_players(buffer, &self.leave_fmt, players)?;
             buffer.push('\n');
         }
         Ok(())
@@ -88,7 +88,7 @@ impl MessageFormat {
     fn format_current_players(&self, buffer: &mut String, online_count: u32, players: &Vec<String>) -> Result<(), Error> {
         let mut hashmap = HashMap::new();
         hashmap.insert("count".to_owned(), online_count.to_string());
-        Self::build_players_hashmap(buffer, &mut hashmap, self.players_fmt.as_str(), players)
+        Self::build_players_hashmap(buffer, &mut hashmap, &self.players_fmt, players)
     }
 
     fn build_players(buffer: &mut String, fmt: &str, players: &Vec<String>) -> Result<(), Error> {
@@ -102,7 +102,7 @@ impl MessageFormat {
                              players: &Vec<String>) -> Result<(), Error>
     {
         hashmap.insert("players".to_owned(), players.join(", "));
-        buffer.push_str(fmt.format(&hashmap)?.as_str());
+        buffer.push_str(&fmt.format(&hashmap)?);
         Ok(())
     }
 }
@@ -144,7 +144,7 @@ mod tests {
             ],
         };
 
-        assert_eq!(format.format(&recover).unwrap().as_str(), "[]\nA, B\nD\nA, B, C 3");
+        assert_eq!(&format.format(&recover).unwrap(), "[]\nA, B\nD\nA, B, C 3");
     }
 
     #[test]
@@ -160,7 +160,7 @@ mod tests {
             ],
         };
 
-        assert_eq!(format.format(&message).unwrap().as_str(), "[]\nrecovered\nA, B, C 3");
+        assert_eq!(&format.format(&message).unwrap(), "[]\nrecovered\nA, B, C 3");
     }
 
     #[test]
@@ -168,6 +168,6 @@ mod tests {
         let format = setup_format();
 
         let message = Message::Down;
-        assert_eq!(format.format(&message).unwrap().as_str(), "[]\ndown");
+        assert_eq!(&format.format(&message).unwrap(), "[]\ndown");
     }
 }

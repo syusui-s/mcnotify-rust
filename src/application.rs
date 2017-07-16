@@ -15,10 +15,10 @@ impl Application {
 
     pub fn run(&self, config: Config) {
         let strategy = TwitterEggMode::new(
-            config.twitter.consumer_key.as_str(),
-            config.twitter.consumer_secret.as_str(),
-            config.twitter.access_key.as_str(),
-            config.twitter.access_secret.as_str()
+            &config.twitter.consumer_key,
+            &config.twitter.consumer_secret,
+            &config.twitter.access_key,
+            &config.twitter.access_secret
             );
 
         let formats = config.formats;
@@ -34,7 +34,7 @@ impl Application {
         let notifier = Notifier::new(strategy, formatter);
 
         let interval = time::Duration::from_secs(config.mcnotify.check_interval as u64);
-        let mut status_checker = StatusChecker::new(config.address.hostname.as_str(), config.address.port);
+        let mut status_checker = StatusChecker::new(&config.address.hostname, config.address.port);
         let mut last_status = Status::unavailable("On start");
 
         println!("Start checking.");

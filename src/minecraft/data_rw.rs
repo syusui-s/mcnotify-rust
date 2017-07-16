@@ -298,7 +298,7 @@ mod tests {
         let mut cursor = Cursor::new(given);
 
         let s = cursor.read_string().unwrap();
-        assert_eq!(s.content.as_str(), expected);
+        assert_eq!(&s.content, expected);
     }
 
     #[test]
@@ -307,6 +307,6 @@ mod tests {
         let mut cursor = Cursor::new(given);
 
         let s = cursor.read_string_with_max_len(expected.len()).unwrap();
-        assert_eq!(s.content.as_str(), expected);
+        assert_eq!(&s.content, expected);
     }
 }

@@ -62,22 +62,22 @@ impl StatusChecker {
     }
 
     pub fn check_status(&mut self) -> Status {
-        let address = client::ServerAddr::new(self.hostname.as_str(), self.port);
+        let address = client::ServerAddr::new(&self.hostname, self.port);
 
         // get status
         let mut cli = match client::Client::connect(address) {
             Ok(cli) => cli,
-            Err(_) => return Status::unavailable(format!("Couldn't connect to {}:{}", self.hostname, self.port).as_str()),
+            Err(_) => return Status::unavailable(&format!("Couldn't connect to {}:{}", self.hostname, self.port)),
         };
 
         match cli.handshake(packet::NextState::Status) {
             Ok(_) => { },
-            Err(_) => return Status::unavailable(format!("Couldn't handshake with {}:{}", self.hostname, self.port).as_str()),
+            Err(_) => return Status::unavailable(&format!("Couldn't handshake with {}:{}", self.hostname, self.port)),
         }
 
         let status = match cli.list() {
             Ok(res) => res,
-            Err(e) => return Status::unavailable(format!("List Request was failed : {:?}", e).as_str()),
+            Err(e) => return Status::unavailable(&format!("List Request was failed : {:?}", e)),
         };
 
         // build information

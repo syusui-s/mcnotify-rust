@@ -21,7 +21,7 @@ impl<'a> TwitterEggMode<'a> {
 impl<'a> NotifierStrategy for TwitterEggMode<'a> {
     fn post_message(&self, message: &str) -> Result<(), Error> {
         let trunc : String = message.chars().take(140).collect();
-        egg_mode::tweet::DraftTweet::new(trunc.as_str())
+        egg_mode::tweet::DraftTweet::new(&trunc)
             .send(&self.token)
             .map_err(|_| Error::FailedToPostMessage)?;
         Ok(())

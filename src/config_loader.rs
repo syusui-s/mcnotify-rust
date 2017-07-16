@@ -46,7 +46,7 @@ impl ConfigLoader {
         let mut string = String::with_capacity(256);
         file.read_to_string(&mut string)?;
 
-        Ok(toml::from_str(string.as_str())?)
+        Ok(toml::from_str(&string)?)
     }
 
     pub fn read_config(&self) -> Result<Config, Error> {
