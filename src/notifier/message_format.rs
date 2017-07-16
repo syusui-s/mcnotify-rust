@@ -3,7 +3,7 @@ extern crate chrono;
 
 use std::convert;
 use std::collections::HashMap;
-use strfmt::Format;
+use self::strfmt::Format;
 use notifier::Message;
 use notifier::Message::*;
 
