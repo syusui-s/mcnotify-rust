@@ -116,6 +116,7 @@ impl StatusFormats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use models::Player;
 
     fn setup_format() -> StatusFormats {
         let format = StatusFormats {
@@ -150,7 +151,7 @@ mod tests {
             ]),
         };
 
-        assert_eq!(&format.format(&recover).unwrap(), "[]\nA, B\nD\nA, B, C 3");
+        assert_eq!(&format.format(&recover).unwrap().unwrap(), "[]\nA, B\nD\nA, B, C 3");
     }
 
     #[test]
@@ -166,7 +167,7 @@ mod tests {
             ]),
         };
 
-        assert_eq!(&format.format(&message).unwrap(), "[]\nrecovered\nA, B, C 3");
+        assert_eq!(&format.format(&message).unwrap().unwrap(), "[]\nrecovered\nA, B, C 3");
     }
 
     #[test]
@@ -174,6 +175,6 @@ mod tests {
         let format = setup_format();
 
         let message = StatusDifference::Down { reason: String::from("hoge") };
-        assert_eq!(&format.format(&message).unwrap(), "[]\ndown");
+        assert_eq!(&format.format(&message).unwrap().unwrap(), "[]\ndown");
     }
 }
