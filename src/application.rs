@@ -1,91 +1,85 @@
 use std::{io, time, thread};
 use std::io::Write;
-use notifier::{Notifier, Message, MessageFormat};
+use notifier::{Message, NotifierStrategy};
 use notifier::twitter_eggmode::TwitterEggMode;
-use status_checker::{StatusChecker, Status};
-use status_checker::Status::{Available, Unavailable};
+use status_checker::{StatusChecker, StatusDifference, StatusFormats, FormatError};
 use config::Config;
 
-pub struct Application;
+pub struct Application {
+    config: Config,
+}
 
 impl Application {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(config: Config) -> Self {
+        Self { config }
     }
 
-    pub fn run(&self, config: Config) {
-        let strategy = TwitterEggMode::new(
-            &config.twitter.consumer_key,
-            &config.twitter.consumer_secret,
-            &config.twitter.access_key,
-            &config.twitter.access_secret
+    pub fn run(&self) {
+        let config_twitter = &self.config.twitter;
+        let notifier_strategy = TwitterEggMode::new(
+            &config_twitter.consumer_key,
+            &config_twitter.consumer_secret,
+            &config_twitter.access_key,
+            &config_twitter.access_secret
             );
 
-        let formats = config.formats;
-        let formatter = MessageFormat {
-            recover_msg: formats.recover_msg,
-            down_msg:    formats.down_msg,
-            join_fmt:    formats.join_fmt,
-            leave_fmt:   formats.leave_fmt,
-            players_fmt: formats.players_fmt,
-            time_fmt:    formats.time_fmt,
+        let config_formats = &self.config.formats;
+        let status_formats = StatusFormats {
+            recover_msg: config_formats.recover_msg.clone(),
+            down_msg:    config_formats.down_msg.clone(),
+            join_fmt:    config_formats.join_fmt.clone(),
+            leave_fmt:   config_formats.leave_fmt.clone(),
+            players_fmt: config_formats.players_fmt.clone(),
+            time_fmt:    config_formats.time_fmt.clone(),
         };
 
-        let notifier = Notifier::new(strategy, formatter);
-
-        let interval = time::Duration::from_secs(config.mcnotify.check_interval as u64);
-        let mut status_checker = StatusChecker::new(&config.address.hostname, config.address.port);
-        let mut last_status = Status::unavailable("On start");
+        let interval = time::Duration::from_secs(self.config.mcnotify.check_interval as u64);
+        let mut status_checker = StatusChecker::new(&self.config.address.hostname, self.config.address.port);
 
         println!("Start checking.");
 
         loop {
-            let status = status_checker.check_status();
-            let message_opt = match (&last_status, &status) {
-                ( &Unavailable { .. },
-                  &Unavailable { .. }
-                ) => {
-                    None
-                },
-                ( &Unavailable { .. },
-                  &Available { online_count, ref current_players, .. }
-                ) => {
-                    Some(Message::Recover { online_count, current_players })
-                },
-                ( &Available { .. },
-                  &Unavailable { ref reason }
-                ) => {
-                    writeln!(&mut io::stderr(), "{}", reason).unwrap();
-                    Some(Message::Down {})
-                },
-                ( &Available { .. },
-                  &Available {
-                      online_count,
-                      ref current_players,
-                      ref joined_players,
-                      ref left_players
-                  }
-                ) if ! joined_players.is_empty() || ! left_players.is_empty() => {
-                    Some(Message::PlayerChange {
-                        online_count,
-                        current_players,
-                        joined_players,
-                        left_players
-                    })
-                },
-                _ => None,
-            };
-
-            if let Some(msg) = message_opt {
-                let notify_result = notifier.notify(&msg);
-
-                if let Err(e) = notify_result {
-                    writeln!(&mut io::stderr(), "Failed to notify. {:?}", e).unwrap();
-                }
-            }
-
-            last_status = status.clone();
+            Self::check_and_notify(&mut status_checker, &status_formats, &notifier_strategy);
             thread::sleep(interval);
+        }
+    }
+
+    fn check_and_notify<S>(
+        status_checker: &mut StatusChecker,
+        status_formats: &StatusFormats,
+        notifier_strategy: &S)
+        where S: NotifierStrategy
+    {
+        let status_difference = status_checker.get_status_difference();
+
+        match &status_difference {
+            &StatusDifference::Down { ref reason } => {
+                writeln!(&mut io::stderr(), "Error occurred while checking a status: {}", reason).unwrap();
+                return;
+            },
+            _ => {}
+        }
+
+        let message_result = status_formats.format(&status_difference);
+        let message_opt = match message_result {
+            Ok(message) => message,
+            Err(FormatError::FormatError(reason)) => {
+                writeln!(&mut io::stderr(), "Error occurred while formatting a status: {}", reason).unwrap();
+                return;
+            }
+        };
+
+        let message = match message_opt {
+            Some(message) => message,
+            None => return,
+        };
+
+        match notifier_strategy.notify(&Message::new(&message)) {
+            Ok(()) => {},
+            Err(e) => {
+                writeln!(&mut io::stderr(), "Failed to notify. {:?}", e).unwrap();
+                return;
+            }
         }
     }
 }

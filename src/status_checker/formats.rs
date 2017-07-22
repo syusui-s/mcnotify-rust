@@ -4,8 +4,8 @@ extern crate strfmt;
 use std::convert;
 use std::collections::HashMap;
 use self::strfmt::Format;
-use notifier::Message;
-use notifier::Message::*;
+use status_checker::StatusDifference;
+use models::Players;
 
 #[derive(Debug)]
 pub enum Error {
@@ -18,7 +18,7 @@ impl convert::From<strfmt::FmtError> for Error {
     }
 }
 
-pub struct MessageFormat {
+pub struct StatusFormats {
     pub recover_msg: String,
     pub down_msg: String,
     pub join_fmt: String,
@@ -27,15 +27,17 @@ pub struct MessageFormat {
     pub time_fmt: String,
 }
 
-impl MessageFormat {
-    pub fn format(&self, message: &Message) -> Result<String, Error> {
+impl StatusFormats {
+    pub fn format(&self, status_difference: &StatusDifference) -> Result<Option<String>, Error> {
+        use status_checker::StatusDifference::*;
+
         let mut buffer = String::with_capacity(560); // 140 chars * 4 bytes
 
         self.format_time(&mut buffer);
 
         // join / leave
-        match message {
-            &PlayerChange { joined_players, left_players, .. } => {
+        match status_difference {
+            &PlayerChange { ref joined_players, ref left_players, .. } => {
                 self.format_join(&mut buffer, joined_players)?;
                 self.format_leave(&mut buffer, left_players)?;
             }
@@ -43,21 +45,25 @@ impl MessageFormat {
                 buffer.push_str(&self.recover_msg);
                 buffer.push('\n');
             },
-            &Down { } => {
+            &Down { .. } => {
                 buffer.push_str(&self.down_msg);
+            },
+            &None { } => {
+                return Ok(Option::None);
+                // do nothing
             },
         }
 
         // current players
-        match message {
-            &PlayerChange { online_count, current_players, .. } |
-            &Recover      { online_count, current_players, .. } => {
+        match status_difference {
+            &PlayerChange { online_count, ref current_players, .. } |
+            &Recover      { online_count, ref current_players, .. } => {
                 self.format_current_players(&mut buffer, online_count, current_players)?;
             },
             _ => { },
         };
 
-        Ok(buffer)
+        Ok(Some(buffer))
     }
 
     fn format_time(&self, buffer: &mut String) {
@@ -69,7 +75,7 @@ impl MessageFormat {
         }
     }
 
-    fn format_join(&self, buffer: &mut String, players: &Vec<String>) -> Result<(), Error> {
+    fn format_join(&self, buffer: &mut String, players: &Players) -> Result<(), Error> {
         if ! players.is_empty() {
             Self::build_players(buffer, &self.join_fmt, players)?;
             buffer.push('\n');
@@ -77,7 +83,7 @@ impl MessageFormat {
         Ok(())
     }
 
-    fn format_leave(&self, buffer: &mut String, players: &Vec<String>) -> Result<(), Error> {
+    fn format_leave(&self, buffer: &mut String, players: &Players) -> Result<(), Error> {
         if ! players.is_empty() {
             Self::build_players(buffer, &self.leave_fmt, players)?;
             buffer.push('\n');
@@ -85,13 +91,13 @@ impl MessageFormat {
         Ok(())
     }
 
-    fn format_current_players(&self, buffer: &mut String, online_count: u32, players: &Vec<String>) -> Result<(), Error> {
+    fn format_current_players(&self, buffer: &mut String, online_count: u32, players: &Players) -> Result<(), Error> {
         let mut hashmap = HashMap::new();
         hashmap.insert("count".to_owned(), online_count.to_string());
         Self::build_players_hashmap(buffer, &mut hashmap, &self.players_fmt, players)
     }
 
-    fn build_players(buffer: &mut String, fmt: &str, players: &Vec<String>) -> Result<(), Error> {
+    fn build_players(buffer: &mut String, fmt: &str, players: &Players) -> Result<(), Error> {
         let mut hashmap = HashMap::new();
         Self::build_players_hashmap(buffer, &mut hashmap, fmt, players)
     }
@@ -99,9 +105,9 @@ impl MessageFormat {
     fn build_players_hashmap(buffer: &mut String,
                              hashmap: &mut HashMap<String, String>,
                              fmt: &str,
-                             players: &Vec<String>) -> Result<(), Error>
+                             players: &Players) -> Result<(), Error>
     {
-        hashmap.insert("players".to_owned(), players.join(", "));
+        hashmap.insert("players".to_owned(), format!("{}", players));
         buffer.push_str(&fmt.format(&hashmap)?);
         Ok(())
     }
@@ -111,8 +117,8 @@ impl MessageFormat {
 mod tests {
     use super::*;
 
-    fn setup_format() -> MessageFormat {
-        let format = MessageFormat {
+    fn setup_format() -> StatusFormats {
+        let format = StatusFormats {
             recover_msg: "recovered".to_owned(),
             down_msg:    "down".to_owned(),
             join_fmt:    "{players}".to_owned(),
@@ -125,49 +131,49 @@ mod tests {
     }
 
     #[test]
-    fn message_format_player_change() {
+    fn status_format_player_change() {
         let format = setup_format();
 
-        let recover = Message::PlayerChange {
+        let recover = StatusDifference::PlayerChange {
             online_count: 3,
-            current_players: &vec![
-                "A".to_owned(),
-                "B".to_owned(),
-                "C".to_owned(),
-            ],
-            joined_players: &vec![
-                "A".to_owned(),
-                "B".to_owned(),
-            ],
-            left_players: &vec![
-                "D".to_owned(),
-            ],
+            current_players: Players::from(vec![
+                Player::new("idA", "A"),
+                Player::new("idB", "B"),
+                Player::new("idC", "C"),
+            ]),
+            joined_players: Players::from(vec![
+                Player::new("idA", "A"),
+                Player::new("idB", "B"),
+            ]),
+            left_players: Players::from(vec![
+                Player::new("idD", "D"),
+            ]),
         };
 
         assert_eq!(&format.format(&recover).unwrap(), "[]\nA, B\nD\nA, B, C 3");
     }
 
     #[test]
-    fn message_format_recover() {
+    fn status_format_recover() {
         let format = setup_format();
 
-        let message = Message::Recover {
+        let message = StatusDifference::Recover {
             online_count: 3,
-            current_players: &vec![
-                "A".to_owned(),
-                "B".to_owned(),
-                "C".to_owned(),
-            ],
+            current_players: Players::from(vec![
+                Player::new("idA", "A"),
+                Player::new("idB", "B"),
+                Player::new("idC", "C"),
+            ]),
         };
 
         assert_eq!(&format.format(&message).unwrap(), "[]\nrecovered\nA, B, C 3");
     }
 
     #[test]
-    fn message_format_down() {
+    fn status_format_down() {
         let format = setup_format();
 
-        let message = Message::Down;
+        let message = StatusDifference::Down { reason: String::from("hoge") };
         assert_eq!(&format.format(&message).unwrap(), "[]\ndown");
     }
 }

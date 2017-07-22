@@ -1,7 +1,8 @@
 extern crate egg_mode;
 
 use super::notifier::Error;
-use super::notifier::NotifierStrategy;
+use super::NotifierStrategy;
+use super::Message;
 
 pub struct TwitterEggMode<'a> {
     token: egg_mode::Token<'a>,
@@ -19,9 +20,9 @@ impl<'a> TwitterEggMode<'a> {
 }
 
 impl<'a> NotifierStrategy for TwitterEggMode<'a> {
-    fn post_message(&self, message: &str) -> Result<(), Error> {
-        let trunc : String = message.chars().take(140).collect();
-        egg_mode::tweet::DraftTweet::new(&trunc)
+    fn notify(&self, message: &Message) -> Result<(), Error> {
+        let truncated = message.truncate(140);
+        egg_mode::tweet::DraftTweet::new(truncated.body())
             .send(&self.token)
             .map_err(|_| Error::FailedToPostMessage)?;
         Ok(())

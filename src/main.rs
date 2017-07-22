@@ -6,15 +6,16 @@ extern crate getopts;
 pub mod util;
 pub mod minecraft;
 pub mod notifier;
+pub mod models;
 pub mod status_checker;
 pub mod config;
-pub mod config_loader;
 pub mod application;
 
 use std::{env, process, io};
 use std::path::{Path, PathBuf};
 use std::io::Write;
 use getopts::Options;
+use config::Config;
 use application::Application;
 
 fn print_usage(program_name: &str, opts: &Options) {
@@ -57,15 +58,14 @@ fn main() {
         return;
     }
 
-    let config_loader = config_loader::ConfigLoader::new();
     let config =
         match matches.opt_str("config") {
             Some(custom_conf) =>
-                config_loader.read_config_from_path(Path::new(&custom_conf)),
+                Config::read_path(Path::new(&custom_conf)),
             None =>
-                config_loader.read_config(),
+                Config::read_default(),
         }.expect("Couldn't load the configuration...");
 
-    let app = Application::new();
-    app.run(config);
+    let app = Application::new(config);
+    app.run();
 }
