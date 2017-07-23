@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::iter::FromIterator;
 use minecraft::json_data::status::Player as RawPlayer;
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Player {
     id: String,
     name: String,
@@ -29,7 +29,7 @@ impl Player {
     }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct Players {
     players: HashSet<Player>
 }
@@ -81,8 +81,49 @@ impl fmt::Display for Players {
     }
 }
 
+impl fmt::Debug for Players {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
 impl Players {
     pub fn is_empty(&self) -> bool {
         self.players.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_players_format() {
+        let players = Players::from( vec![
+            Player::new("idA", "A"),
+            Player::new("idB", "B"),
+            Player::new("idC", "C"),
+        ]);
+        assert_eq!(format!("{}", players), "A, B, C");
+    }
+
+    #[test]
+    fn test_players_sub() {
+        let players_lhs = Players::from(vec![
+            Player::new("idA", "A"),
+            Player::new("idB", "B"),
+            Player::new("idC", "C"),
+        ]);
+        let players_rhs = Players::from(vec![
+            Player::new("idC", "C"),
+        ]);
+
+        let actual = &players_lhs - &players_rhs;
+        let expected = Players::from(vec![
+            Player::new("idA", "A"),
+            Player::new("idB", "B"),
+        ]);
+
+        assert_eq!(actual, expected);
     }
 }

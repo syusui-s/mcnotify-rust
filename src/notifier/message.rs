@@ -17,3 +17,14 @@ impl Message {
         Self { body: truncated_body }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn message_truncate() {
+        let message = Message::new("こんにちは、世界。").truncate(5);
+        assert_eq!(message.body(), "こんにちは");
+    }
+}

@@ -148,7 +148,7 @@ impl ListResponsePacket {
 impl FromGeneralPacket for ListResponsePacket {
     fn from_general_packet(general_packet: &mut GeneralPacket) -> Result<Self, Error> {
         let body_string = general_packet.body.read_string()?.content;
-        let status: json_data::status::Status = serde_json::from_str(&body_string).unwrap();
+        let status: json_data::status::Status = serde_json::from_str(&body_string)?;
         Ok(ListResponsePacket::new(status))
     }
 }
