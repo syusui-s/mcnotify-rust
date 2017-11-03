@@ -2,7 +2,7 @@ use std::{io, time, thread};
 use std::io::Write;
 use notifier::{Message, NotifierStrategy};
 use notifier::twitter_eggmode::TwitterEggMode;
-use status_checker::{StatusChecker, StatusDifference, StatusFormats, FormatError};
+use status_checker::{StatusChecker, Status, StatusDifference, StatusFormats, FormatError};
 use config::Config;
 
 pub struct Application {
@@ -54,6 +54,10 @@ impl Application {
 
         match &status_difference {
             &StatusDifference::Down { ref reason } => {
+                writeln!(&mut io::stderr(), "Error occurred while checking a status: {}", reason).unwrap();
+                return;
+            },
+            &StatusDifference::None { latest_status: Status::Unavailable { ref reason } } => {
                 writeln!(&mut io::stderr(), "Error occurred while checking a status: {}", reason).unwrap();
                 return;
             },

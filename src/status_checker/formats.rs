@@ -48,7 +48,7 @@ impl StatusFormats {
             &Down { .. } => {
                 buffer.push_str(&self.down_msg);
             },
-            &None { } => {
+            &None { .. } => {
                 return Ok(Option::None);
                 // do nothing
             },

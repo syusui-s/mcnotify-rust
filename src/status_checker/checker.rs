@@ -2,14 +2,13 @@ use minecraft::{client, packet};
 use models::Players;
 
 /// represents a server state.
-enum Status {
+#[derive(Clone)]
+pub enum Status {
     Available {
         online_count: u32,
         current_players: Players,
     },
-    Unavailable {
-        reason: String,
-    }
+    Unavailable { reason: String },
 }
 
 pub enum StatusDifference {
@@ -20,15 +19,13 @@ pub enum StatusDifference {
         joined_players: Players,
         left_players: Players,
     },
-    /// recovered from 
+    /// recovered from
     Recover {
         online_count: u32,
         current_players: Players,
     },
-    Down {
-        reason: String,
-    },
-    None,
+    Down { reason: String },
+    None { latest_status: Status },
 }
 
 impl StatusDifference {
@@ -37,41 +34,37 @@ impl StatusDifference {
         use self::StatusDifference::*;
 
         match (latest_status, current_status) {
-            ( &Unavailable { .. },
-              &Unavailable { .. }
-            ) => {
-                None
-            },
-            ( &Unavailable { .. },
-              &Available { online_count, ref current_players, .. }
-            ) => {
+            (&Unavailable { .. },
+             &Unavailable { .. }) => {
+                None { latest_status: current_status.clone() }
+            }
+            (&Unavailable { .. },
+             &Available { online_count, ref current_players, ..  }) => {
                 Recover {
                     online_count,
-                    current_players: current_players.clone()
+                    current_players: current_players.clone(),
                 }
-            },
-            ( &Available { .. },
-              &Unavailable { ref reason }
-            ) => {
+            }
+            (&Available { .. },
+             &Unavailable { ref reason }) => {
                 Down { reason: reason.clone() }
             },
-            ( &Available { current_players: ref latest_players, .. },
-              &Available { online_count, ref current_players }
-            ) => {
+            (&Available { current_players: ref latest_players, .. },
+             &Available { online_count, ref current_players, }) => {
                 let joined_players = current_players - latest_players;
-                let left_players   = latest_players  - current_players;
+                let left_players = latest_players - current_players;
 
                 if !joined_players.is_empty() || !left_players.is_empty() {
                     PlayerChange {
                         online_count,
                         current_players: current_players.clone(),
                         joined_players,
-                        left_players
+                        left_players,
                     }
                 } else {
-                    None
+                    None { latest_status: latest_status.clone() }
                 }
-            },
+            }
         }
     }
 }
@@ -87,9 +80,7 @@ impl StatusChecker {
         Self {
             hostname: hostname.to_owned(),
             port,
-            latest_status: Status::Unavailable {
-                reason: "on start".to_owned()
-            }
+            latest_status: Status::Unavailable { reason: "on start".to_owned() },
         }
     }
 
@@ -109,29 +100,38 @@ impl StatusChecker {
         // get status
         let mut cli = match client::Client::connect(address) {
             Ok(cli) => cli,
-            Err(_) => return Unavailable{
-                reason: format!("Couldn't connect to {}:{}", self.hostname, self.port)
-            },
+            Err(_) => {
+                return Unavailable {
+                    reason: format!("Couldn't connect to {}:{}", self.hostname, self.port),
+                }
+            }
         };
 
         match cli.handshake(packet::NextState::Status) {
-            Ok(_) => { },
-            Err(_) => return Unavailable {
-                reason: format!("Couldn't handshake with {}:{}", self.hostname, self.port)
-            },
+            Ok(_) => {}
+            Err(_) => {
+                return Unavailable {
+                    reason: format!("Couldn't handshake with {}:{}", self.hostname, self.port),
+                }
+            }
         }
 
         let status = match cli.list() {
             Ok(res) => res,
-            Err(e) => return Status::Unavailable {
-                reason: format!("List Request was failed : {:?}", e)
-            },
+            Err(e) => {
+                return Status::Unavailable { reason: format!("List Request was failed : {:?}", e) };
+            }
         };
 
+        cli.shutdown();
+
         // build information
-        let online_count    = status.players.online;
+        let online_count = status.players.online;
         let current_players = Players::from(status.players.sample.unwrap_or_else(|| vec![]));
 
-        Status::Available { online_count, current_players }
+        Status::Available {
+            online_count,
+            current_players,
+        }
     }
 }

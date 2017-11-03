@@ -1,5 +1,5 @@
 use std::{io, vec, convert};
-use std::net::{TcpStream, ToSocketAddrs, SocketAddr};
+use std::net::{TcpStream, ToSocketAddrs, SocketAddr, Shutdown};
 use super::{packet,packet_rw,data_rw,state,json_data};
 use super::packet_rw::{ReadPacket, WritePacket};
 use super::state::State;
@@ -57,14 +57,6 @@ impl ToServerAddr for ServerAddr {
         Ok(self.clone())
     }
 }
-
-/*
-impl ToServerAddr for ServerAddr {
-    fn to_server_addr(&self) -> Result<ServerAddr, Error> {
-        Ok(self)
-    }
-}
-*/
 
 impl<'a> ToServerAddr for &'a str {
     fn to_server_addr(&self) -> Result<ServerAddr, Error> {
@@ -126,5 +118,15 @@ impl Client {
         let status = packet.status;
 
         Ok(status)
+    }
+
+    pub fn shutdown(&mut self) {
+        self.stream.shutdown(Shutdown::Both).unwrap();
+    }
+}
+
+impl Drop for Client {
+    fn drop(&mut self) {
+        self.shutdown();
     }
 }
