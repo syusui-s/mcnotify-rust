@@ -4,7 +4,7 @@ mcnotify-rust: Minecraft status notifier written in Rust
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Build Status](https://travis-ci.org/syusui-s/mcnotify-rust.svg?branch=master)](https://travis-ci.org/syusui-s/mcnotify-rust)
 
-**CURRENTLY UNDER DEVELOPMENT.**
+**CURRENTLY ALPHA VERSION.**
 
 ## Overview
 mcnotify send notifications about server status when its change.
@@ -17,8 +17,8 @@ will support these informations for notifications:
 
 will support these integrations:
 
-* IFTTT Maker Channel
-* (Twitter)
+* Twitter
+* (IFTTT Maker Channel)
 * (Slack)
 
 ## How to build
@@ -29,10 +29,10 @@ $ cargo build --release
 ```
 
 ## How to use
-Currently, only twitter notifier is available.
+Currently only twitter notifier is available.
 
 1. Create your own app (<https://apps.twitter.com/>)
-	* mcnotify does NOT provide consumer key.
+	* mcnotify **does NOT** provide consumer key.
 1. Edit your configurations and save it to `~/.config/mcnotify/config.toml` (See `config.example.toml`).
 1. Run.
 
@@ -40,5 +40,12 @@ Currently, only twitter notifier is available.
 mcnotify is not daemon process. You can use nohup, tmux or systemd service to run mcnotify on background.
 
 ```console
+$ cargo build
 $ ./target/release/mcnotify
+```
+
+If you want to see a help message, use `--help` options.
+
+```console
+$ mcnotify --help
 ```
