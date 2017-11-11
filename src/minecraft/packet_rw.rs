@@ -75,7 +75,7 @@ impl<T> ReadPacket for T
         // Body
         let body_len = (len as usize) - packet_id_container.read_len;
         let mut body = vec![0_u8; body_len];
-        self.read(body.as_mut_slice())?;
+        self.read_exact(body.as_mut_slice())?;
 
         // Construct
         let packet = GeneralPacket::with_body_vec(state.detect_packet_type(packet_id)?, body);
