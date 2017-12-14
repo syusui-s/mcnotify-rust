@@ -1,5 +1,4 @@
-use std::{io, time, thread};
-use std::io::Write;
+use std::{time, thread};
 use notifier::{Message, NotifierStrategy};
 use notifier::twitter_eggmode::TwitterEggMode;
 use status_checker::{StatusChecker, Status, StatusDifference, StatusFormats, FormatError};
@@ -36,7 +35,7 @@ impl Application {
         let interval = time::Duration::from_secs(self.config.mcnotify.check_interval as u64);
         let mut status_checker = StatusChecker::new(&self.config.address.hostname, self.config.address.port);
 
-        println!("Start checking.");
+        info!("Start checking.");
 
         loop {
             Self::check_and_notify(&mut status_checker, &status_formats, &notifier_strategy);
@@ -54,11 +53,11 @@ impl Application {
 
         match &status_difference {
             &StatusDifference::Down { ref reason } => {
-                writeln!(&mut io::stderr(), "Error occurred while checking a status: {}", reason).unwrap();
+                error!("Server is down: {}", reason);
                 return;
             },
             &StatusDifference::None { latest_status: Status::Unavailable { ref reason } } => {
-                writeln!(&mut io::stderr(), "Error occurred while checking a status: {}", reason).unwrap();
+                error!("Server is unavailable: {}", reason);
                 return;
             },
             _ => {}
@@ -68,7 +67,7 @@ impl Application {
         let message_opt = match message_result {
             Ok(message) => message,
             Err(FormatError::FormatError(reason)) => {
-                writeln!(&mut io::stderr(), "Error occurred while formatting a status: {}", reason).unwrap();
+                error!("Error occurred while formatting a status: {}", reason);
                 return;
             }
         };
@@ -81,7 +80,7 @@ impl Application {
         match notifier_strategy.notify(&Message::new(&message)) {
             Ok(()) => {},
             Err(e) => {
-                writeln!(&mut io::stderr(), "Failed to notify. {:?}", e).unwrap();
+                error!("Failed to notify. {:?}", e);
                 return;
             }
         }

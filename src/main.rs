@@ -1,5 +1,8 @@
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 extern crate getopts;
 
 #[macro_use]
@@ -32,6 +35,8 @@ fn print_version(program_name: &str) {
 }
 
 fn main() {
+    env_logger::init().unwrap();
+
     let args: Vec<String> = env::args().collect();
     let program_name = args[0].clone();
 
