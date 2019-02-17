@@ -22,7 +22,7 @@ time_fmt    = "[%y-%m-%d %H:%M:%S (%Z)]"
 # If you want to get notifications on Twitter,
 # configure this section.
 [twitter]
-consumer_token = ""
-consumer_key   = ""
-access_token   = ""
-access_key     = ""
+consumer_key    = ""
+consumer_secret = ""
+access_key      = ""
+access_secret   = ""

@@ -1,6 +1,6 @@
 [package]
 name = "mcnotify"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Shusui MOYATANI <syusui.s@gmail.com>"]
 
 [dependencies]
@@ -13,6 +13,7 @@ toml = "0.4.2"
 getopts = "0.2"
 strfmt = "0.1.5"
 chrono = "0.4.0"
-egg-mode = "0.9.0"
+egg-mode = { git = "https://github.com/QuietMisdreavus/twitter-rs.git", rev = "8491554" }
 log = "0.3"
-env_logger = "0.4.3"
+env_logger = "0.6"
+tokio = "0.1"

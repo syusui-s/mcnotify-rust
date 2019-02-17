@@ -2,7 +2,7 @@ use super::Message;
 
 #[derive(Debug)]
 pub enum Error {
-    FailedToPostMessage,
+    FailedToPostMessage(String),
 }
 
 pub trait NotifierStrategy {

@@ -1,5 +1,5 @@
 use std::{time, thread};
-use notifier::{Message, NotifierStrategy};
+use notifier::{Message, NotifierStrategy, Error as NotifierError};
 use notifier::twitter_eggmode::TwitterEggMode;
 use status_checker::{StatusChecker, Status, StatusDifference, StatusFormats, FormatError};
 use config::Config;
@@ -79,10 +79,8 @@ impl Application {
 
         match notifier_strategy.notify(&Message::new(&message)) {
             Ok(()) => {},
-            Err(e) => {
-                error!("Failed to notify. {:?}", e);
-                return;
-            }
+            Err(NotifierError::FailedToPostMessage(ref msg)) =>
+                error!("Failed to notify. {:?}", msg),
         }
     }
 }
