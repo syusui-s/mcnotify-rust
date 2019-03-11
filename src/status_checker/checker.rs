@@ -123,8 +123,6 @@ impl StatusChecker {
             }
         };
 
-        cli.shutdown();
-
         // build information
         let online_count = status.players.online;
         let current_players = Players::from(status.players.sample.unwrap_or_else(|| vec![]));

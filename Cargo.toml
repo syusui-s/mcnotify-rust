@@ -1,6 +1,6 @@
 [package]
 name = "mcnotify"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Shusui MOYATANI <syusui.s@gmail.com>"]
 
 [dependencies]
