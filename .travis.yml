@@ -1,3 +1,47 @@
 language: rust
 rust:
-    - 1.32.0
+- 1.32.0
+dist: xenial
+
+matrix:
+  include:
+  - os: osx
+    rust: stable
+    env: TARGET=x86_64-apple-darwin
+  - os: linux
+    rust: stable
+    env: TARGET=x86_64-unknown-linux-gnu
+    addons:
+      apt:
+        packages:
+        - libssl-dev
+        update: true
+  - os: linux
+    rust: stable
+    env: TARGET=i686-unknown-linux-gnu
+    addons:
+      apt:
+        packages:
+        - gcc-5-multilib
+        - lib32gcc-5-dev
+        - libssl-dev:i386
+        update: true
+
+script:
+- cargo build --verbose --all
+- cargo test --verbose --all
+
+before_deploy:
+- cargo build --target "$TARGET" --release
+- mkdir "mcnotify-rust-${TRAVIS_TAG}-${TARGET}"
+- cp target/$TARGET/release/mcnotify LICENSE README.md "mcnotify-rust-${TRAVIS_TAG}-${TARGET}"
+- zip "mcnotify-rust-${TRAVIS_TAG}-${TARGET}.zip" -r "mcnotify-rust-${TRAVIS_TAG}-${TARGET}"
+
+deploy:
+  provider: releases
+  api_key:
+    secure: UfX6kyoe6SgfOa2J9FTyov3MDZgP9tYUgnfxPdTGG81P02DNTULiWWiBPji5gh8iB97c4/sh0XfYVPSBlNGlocNg2kc6WJAvz+z3PDS9tWKVKSDe12ZC8uS7YcQqe194r0psJ/Hc1h97XgTo3FBleJU/osP7efowK+4jXKovGNciyDea73JICzHQMuHh0YvlOX2hf0ysSTL0vpypoXI3+mJfQ3/jatS+3UZ6oDUfdcjRv0Pirc7+O3bXPd+sI4BUx3mntl8mlu6HdDJy9ihcJLWSoKFdFfDEJafVDXt36UMpG5OY7bFZ0zgAjTrTfUrYa5+jFId/SZ6gqxW6Q+WX5H+f/jaqmtUuEkMrzFMYjkKqUGmuirSDIsr7VLNMbeD9HUc6liARdrchRva3dniCnTqTW4JAheuJ3lDtWb1QuQ2fUZ4I8676ILUZ6EQgEe1Ttm9Kj0GFEQydsKH9UCy6U2yTrWNPp8zgsN52gOBCJf4jr10CKXIGeIFvnul1mJ5R4+Cm5cFFnsJST2eEjEzCwe7Ov/lupTrVVufjwOxViPGBc9B0WgMnSDTBgfcKFQkzHmnGB5Bw4PmAqSuQaaukCrPRWKx8nOIJPkOcwbq+JgfYfpZDVVtVZdxM+iGEFi1pPW2EikmOOyLhjcTYip0X4g5fvlctC8gHsXloplas1lI=
+  file: mcnotify-rust-${TRAVIS_TAG}-${TARGET}.zip
+  on:
+    repo: syusui-s/mcnotify-rust
+    tags: true
