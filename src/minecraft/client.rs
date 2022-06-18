@@ -72,10 +72,10 @@ impl<'a> ToServerAddr for &'a str {
             let mut iter = self.rsplitn(2, ':');
             let port_str = iter
                 .next()
-                .ok_or(AddressConvertError("invalid port number".to_owned()))?;
+                .ok_or_else(|| AddressConvertError("invalid port number".to_owned()))?;
             let hostname = iter
                 .next()
-                .ok_or(AddressConvertError("invalid hostname".to_owned()))?;
+                .ok_or_else(|| AddressConvertError("invalid hostname".to_owned()))?;
             let port: u16 = port_str
                 .parse()
                 .map_err(|_| AddressConvertError("invalid port number, parse failed".to_owned()))?;
@@ -131,7 +131,7 @@ impl Client {
             self.handshake(NextState::Status)?;
         }
 
-        let packet = ListRequestPacket::new();
+        let packet = ListRequestPacket::default();
         self.stream.write_packet(&packet)?;
 
         let packet = self.stream.read_packet::<ListResponsePacket>(self.state)?;

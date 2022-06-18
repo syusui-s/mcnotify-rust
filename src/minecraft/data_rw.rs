@@ -75,7 +75,7 @@ macro_rules! write_variable_integer {
                     tmp |= 0b_1000_0000;
                 }
 
-                self.write(&[tmp])?;
+                self.write_all(&[tmp])?;
 
                 if uval == 0 {
                     break;
@@ -208,7 +208,7 @@ where
 
         if (len > max_len) || (len > STRING_MAX) {
             return Err(Error::StringIsTooLong);
-        } else if len <= 0 {
+        } else if len == 0 {
             return Err(Error::StringHasInvalidLength);
         }
 

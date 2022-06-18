@@ -3,7 +3,7 @@ extern crate futures;
 
 use self::futures::executor::block_on;
 
-use super::notifier::Error;
+use super::notifier_base::Error;
 use super::Message;
 use super::NotifierStrategy;
 

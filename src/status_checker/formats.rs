@@ -36,8 +36,8 @@ impl StatusFormats {
         self.format_time(&mut buffer);
 
         // join / leave
-        match status_difference {
-            &PlayerChange {
+        match *status_difference {
+            PlayerChange {
                 ref joined_players,
                 ref left_players,
                 ..
@@ -45,14 +45,14 @@ impl StatusFormats {
                 self.format_join(&mut buffer, joined_players)?;
                 self.format_leave(&mut buffer, left_players)?;
             }
-            &Recover { .. } => {
+            Recover { .. } => {
                 buffer.push_str(&self.recover_msg);
                 buffer.push('\n');
             }
-            &Down { .. } => {
+            Down { .. } => {
                 buffer.push_str(&self.down_msg);
             }
-            &None { .. } => {
+            None { .. } => {
                 return Ok(Option::None);
                 // do nothing
             }

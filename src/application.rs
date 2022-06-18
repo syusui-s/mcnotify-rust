@@ -53,12 +53,12 @@ impl Application {
     {
         let status_difference = status_checker.get_status_difference();
 
-        match &status_difference {
-            &StatusDifference::Down { ref reason } => {
+        match status_difference {
+            StatusDifference::Down { ref reason } => {
                 error!("Server is down: {}", reason);
                 return;
             }
-            &StatusDifference::None {
+            StatusDifference::None {
                 latest_status: Status::Unavailable { ref reason },
             } => {
                 error!("Server is unavailable: {}", reason);

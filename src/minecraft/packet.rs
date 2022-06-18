@@ -28,11 +28,11 @@ pub enum PacketType {
     PingPong,
 }
 
-impl convert::Into<i32> for PacketType {
-    fn into(self) -> i32 {
+impl convert::From<PacketType> for i32 {
+    fn from(packet: PacketType) -> i32 {
         use self::PacketType::*;
 
-        match self {
+        match packet {
             HandShake => 0,
             List => 0,
             PingPong => 1,
@@ -46,11 +46,11 @@ pub enum NextState {
     Login,
 }
 
-impl convert::Into<i32> for NextState {
-    fn into(self) -> i32 {
+impl convert::From<NextState> for i32 {
+    fn from(state: NextState) -> i32 {
         use self::NextState::*;
 
-        match self {
+        match state {
             Status => 1,
             Login => 2,
         }
@@ -131,7 +131,13 @@ pub struct ListRequestPacket;
 
 impl ListRequestPacket {
     pub fn new() -> Self {
-        Self {}
+        ListRequestPacket::default()
+    }
+}
+
+impl Default for ListRequestPacket {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

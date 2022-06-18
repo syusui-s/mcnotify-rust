@@ -46,8 +46,8 @@ where
         let len = (body.len() + packet_id.len()) as i32;
 
         self.write_varint(len)?;
-        self.write(packet_id)?;
-        self.write(body)?;
+        self.write_all(packet_id)?;
+        self.write_all(body)?;
 
         Ok(())
     }
