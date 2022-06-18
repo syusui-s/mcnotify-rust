@@ -17,12 +17,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/rust-toolchain') }}
       - uses: actions-rs/toolchain@v1
         with:
-          components: rustfmt
+          components: rustfmt, clippy
       - name: Format
         run: cargo fmt --all -- --check
-      # TODO: enable clippy
-      # - name: Lint
-      #   run: cargo clippy
+      - name: Lint
+        run: cargo clippy
       - name: Test
         run: cargo test --all
       - name: Build
