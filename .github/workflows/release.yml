@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Cache
-        uses: ./.github/actions/cache
       - uses: actions-rs/toolchain@v1
       - run: mkdir binaries
       - name: x86_64-unknown-linux-gnu
