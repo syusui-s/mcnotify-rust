@@ -13,10 +13,11 @@ jobs:
       - uses: actions-rs/toolchain@v1
       - run: mkdir binaries
       - name: x86_64-unknown-linux-gnu
-        rustup target add x86_64-unknown-linux-gnu
-        cargo clean
-        cargo build --release
-        cp target/release/mcnotify binaries/mcnotify.x86_64
+        run: |
+          rustup target add x86_64-unknown-linux-gnu
+          cargo clean
+          cargo build --release
+          cp target/release/mcnotify binaries/mcnotify.x86_64
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
