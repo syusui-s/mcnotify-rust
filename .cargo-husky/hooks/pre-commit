@@ -1,0 +1,8 @@
+#!/bin/sh
+set -xe
+
+cargo build
+
+cargo test --all
+
+cargo fmt --all -- --check
