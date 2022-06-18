@@ -1,0 +1,23 @@
+name: Release
+on:
+  push:
+    branches-ignore:
+      - "*"
+    tags:
+      - "v*"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+      - run: mkdir binaries
+      - name: x86_64-unknown-linux-gnu
+        rustup target add x86_64-unknown-linux-gnu
+        cargo clean
+        cargo build --release
+        cp target/release/mcnotify binaries/mcnotify.x86_64
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: binaries/mcnotify.x86_64

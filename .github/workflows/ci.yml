@@ -1,0 +1,16 @@
+name: CI
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Test
+        run: cargo test --all
+      - name: Build
+        run: cargo build
+      - name: Run
+        run: cargo run -- --version

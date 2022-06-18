@@ -1,7 +1,7 @@
 #!/bin/sh
 set -xe
 
-cargo build
+cargo check
 
 cargo test --all
 
