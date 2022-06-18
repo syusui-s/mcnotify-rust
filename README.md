@@ -2,7 +2,8 @@ mcnotify-rust: Minecraft status notifier written in Rust
 ===
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Build Status](https://travis-ci.org/syusui-s/mcnotify-rust.svg?branch=master)](https://travis-ci.org/syusui-s/mcnotify-rust)
+[![BuildStatus](https://github.com/syusui-s/mcnotify-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/syusui-s/mcnotify-rust/actions/workflows/ci.yml)
+
 
 **CURRENTLY ALPHA VERSION.**
 
