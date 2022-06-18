@@ -95,7 +95,7 @@ where
         P: FromGeneralPacket,
     {
         let mut general_packet = self.read_general_packet(state)?;
-        return P::from_general_packet(&mut general_packet).map_err(|e| Error::from(e));
+        P::from_general_packet(&mut general_packet).map_err(Error::from)
     }
 }
 

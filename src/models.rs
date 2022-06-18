@@ -54,7 +54,7 @@ impl convert::From<Vec<Player>> for Players {
 
 impl FromIterator<RawPlayer> for Players {
     fn from_iter<I: IntoIterator<Item = RawPlayer>>(iter: I) -> Self {
-        Self::from_iter(iter.into_iter().map(|raw_player| Player::from(raw_player)))
+        Self::from_iter(iter.into_iter().map(Player::from))
     }
 }
 

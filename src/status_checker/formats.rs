@@ -126,7 +126,7 @@ impl StatusFormats {
         players: &Players,
     ) -> Result<(), Error> {
         hashmap.insert("players".to_owned(), format!("{}", players));
-        buffer.push_str(&fmt.format(&hashmap)?);
+        buffer.push_str(&fmt.format(hashmap)?);
         Ok(())
     }
 }
@@ -137,16 +137,14 @@ mod tests {
     use crate::models::Player;
 
     fn setup_format() -> StatusFormats {
-        let format = StatusFormats {
+        StatusFormats {
             recover_msg: "recovered".to_owned(),
             down_msg: "down".to_owned(),
             join_fmt: "{players}".to_owned(),
             leave_fmt: "{players}".to_owned(),
             players_fmt: "{players} {count}".to_owned(),
             time_fmt: "[]".to_owned(),
-        };
-
-        format
+        }
     }
 
     #[test]

@@ -68,7 +68,7 @@ impl<'a> ToServerAddr for &'a str {
     fn to_server_addr(&self) -> Result<ServerAddr, Error> {
         use self::Error::AddressConvertError;
 
-        if self.contains(":") {
+        if self.contains(':') {
             let mut iter = self.rsplitn(2, ':');
             let port_str = iter
                 .next()
@@ -81,7 +81,7 @@ impl<'a> ToServerAddr for &'a str {
                 .map_err(|_| AddressConvertError("invalid port number, parse failed".to_owned()))?;
             Ok(ServerAddr::new(hostname, port))
         } else {
-            Ok(ServerAddr::from_hostname(&self))
+            Ok(ServerAddr::from_hostname(self))
         }
     }
 }
@@ -95,14 +95,14 @@ pub struct Client {
 impl Client {
     pub fn connect<A: ToServerAddr>(addr: A) -> Result<Self, Error> {
         let server_addr = addr.to_server_addr()?;
-        let stream = TcpStream::connect(&server_addr).map_err(|err| Error::ConnectionError(err))?;
+        let stream = TcpStream::connect(&server_addr).map_err(Error::ConnectionError)?;
 
         stream.set_read_timeout(None)?;
 
         Ok(Client {
             server_addr,
             state: State::HandShaking,
-            stream: stream,
+            stream,
         })
     }
 

@@ -126,7 +126,7 @@ where
 
         self.write_varint(len as i32)?;
 
-        for chr in string.as_bytes().into_iter() {
+        for chr in string.as_bytes().iter() {
             self.write_byte(*chr)?;
         }
 
@@ -228,7 +228,7 @@ mod tests {
     use super::*;
     use std::io::{Cursor, Seek, SeekFrom};
 
-    const VARINT_DATA: [(i32, &'static [u8]); 10] = [
+    const VARINT_DATA: [(i32, &[u8]); 10] = [
         (0_i32, &[0x00_u8]),
         (1_i32, &[0x01_u8]),
         (2_i32, &[0x02_u8]),
@@ -247,7 +247,7 @@ mod tests {
         ),
     ];
 
-    const VARLONG_DATA: [(i64, &'static [u8]); 11] = [
+    const VARLONG_DATA: [(i64, &[u8]); 11] = [
         (0_i64, &[0x00_u8]),
         (1_i64, &[0x01_u8]),
         (2_i64, &[0x02_u8]),
@@ -287,7 +287,7 @@ mod tests {
         ),
     ];
 
-    const STRING_DATA: (&'static str, &'static [u8]) = (
+    const STRING_DATA: (&str, &[u8]) = (
         "hello world😆",
         &[
             15, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 240, 159, 152, 134,

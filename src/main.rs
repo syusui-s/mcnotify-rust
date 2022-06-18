@@ -53,7 +53,7 @@ async fn main() {
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => {
-            writeln!(&mut io::stderr(), "Option parse error: {}", f.to_string()).unwrap();
+            writeln!(&mut io::stderr(), "Option parse error: {}", f).unwrap();
             process::exit(1);
         }
     };

@@ -84,7 +84,7 @@ impl Config {
         let mut pathbuf = xdg_basedir::get_config_home()?;
         let path = Self::build_config_path(&mut pathbuf);
         if path.exists() {
-            return Self::read_path(&path);
+            return Self::read_path(path);
         }
 
         // XDG_CONFIG_DIRS
@@ -101,7 +101,7 @@ impl Config {
             }
         }
 
-        return Err(Error::ConfigNotFound);
+        Err(Error::ConfigNotFound)
     }
 
     fn build_config_path(pathbuf: &mut PathBuf) -> &Path {
