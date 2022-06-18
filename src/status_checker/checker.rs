@@ -1,5 +1,5 @@
-use minecraft::{client, packet};
-use models::Players;
+use crate::minecraft::{client, packet};
+use crate::models::Players;
 
 /// represents a server state.
 #[derive(Clone)]

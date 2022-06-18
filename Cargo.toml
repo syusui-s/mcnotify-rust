@@ -2,18 +2,20 @@
 name = "mcnotify"
 version = "0.2.2"
 authors = ["Shusui MOYATANI <syusui.s@gmail.com>"]
+edition = "2021"
 
 [dependencies]
-byteorder = "1.0.0"
-serde = "1.0.8"
-serde_derive = "1.0.8"
-serde_json = "1.0.2"
+byteorder = "1.4.3"
+serde = "1.0.137"
+serde_derive = "1.0.137"
+serde_json = "1.0.81"
 xdg-basedir = "1.0.0"
-toml = "0.4.2"
+toml = "0.5.9"
 getopts = "0.2"
-strfmt = "0.1.5"
-chrono = "0.4.0"
-egg-mode = { git = "https://github.com/QuietMisdreavus/twitter-rs.git", rev = "8491554" }
-log = "0.3"
-env_logger = "0.6"
-tokio = "0.1"
+strfmt = "0.1.6"
+chrono = "0.4.19"
+egg-mode = "0.16.0"
+log = "0.4"
+env_logger = "0.9"
+futures = "0.3.21"
+tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }

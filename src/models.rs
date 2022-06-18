@@ -1,7 +1,7 @@
 use std::{convert, fmt, ops};
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use minecraft::json_data::status::Player as RawPlayer;
+use crate::minecraft::json_data::status::Player as RawPlayer;
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Player {

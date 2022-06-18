@@ -4,8 +4,8 @@ extern crate strfmt;
 use std::convert;
 use std::collections::HashMap;
 use self::strfmt::Format;
-use status_checker::StatusDifference;
-use models::Players;
+use crate::status_checker::StatusDifference;
+use crate::models::Players;
 
 #[derive(Debug)]
 pub enum Error {
@@ -29,7 +29,7 @@ pub struct StatusFormats {
 
 impl StatusFormats {
     pub fn format(&self, status_difference: &StatusDifference) -> Result<Option<String>, Error> {
-        use status_checker::StatusDifference::*;
+        use crate::status_checker::StatusDifference::*;
 
         let mut buffer = String::with_capacity(560); // 140 chars * 4 bytes
 
@@ -116,7 +116,7 @@ impl StatusFormats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::Player;
+    use crate::models::Player;
 
     fn setup_format() -> StatusFormats {
         let format = StatusFormats {

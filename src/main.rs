@@ -4,6 +4,7 @@ extern crate serde_derive;
 extern crate log;
 extern crate env_logger;
 extern crate getopts;
+extern crate tokio;
 
 #[macro_use]
 pub mod util;
@@ -18,8 +19,8 @@ use std::{env, process, io};
 use std::path::{Path, PathBuf};
 use std::io::Write;
 use getopts::Options;
-use config::Config;
-use application::Application;
+use crate::config::Config;
+use crate::application::Application;
 
 fn print_usage(program_name: &str, opts: &Options) {
     let pathbuf = PathBuf::from(program_name);
@@ -34,7 +35,8 @@ fn print_version(program_name: &str) {
              env!("CARGO_PKG_VERSION"));
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
 
     let args: Vec<String> = env::args().collect();

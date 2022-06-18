@@ -44,8 +44,8 @@ type WriteResult = Result<(), Error>;
 type ReadResult<T>  = Result<ReadContainer<T>, Error>;
 
 pub trait WritePacketData {
-    fn write_varint(&mut self, i32) -> WriteResult;
-    fn write_varlong(&mut self, i64) -> WriteResult;
+    fn write_varint(&mut self, value: i32) -> WriteResult;
+    fn write_varlong(&mut self, value: i64) -> WriteResult;
     fn write_byte(&mut self, val: u8) -> WriteResult;
     fn write_unsigned_short(&mut self, val: u16) -> WriteResult;
     fn write_unsigned_int(&mut self, val: u32) -> WriteResult;
@@ -64,8 +64,8 @@ pub trait ReadPacketData {
 
 macro_rules! write_variable_integer {
     ($name:ident, $signed:ty, $unsigned:ty) => (
-        fn $name(&mut self, val: $signed) -> WriteResult {
-            let mut uval = val as $unsigned;
+        fn $name(&mut self, value: $signed) -> WriteResult {
+            let mut uval = value as $unsigned;
 
             loop {
                 let mut tmp = (uval & 0b_0111_1111) as u8;
@@ -86,10 +86,10 @@ macro_rules! write_variable_integer {
 }
 
 impl<T> WritePacketData for T where T: Write {
-    /// Writes a VarInt (i32) to the packet body.
+    // Writes a VarInt (i32) to the packet body.
     write_variable_integer!(write_varint,  i32, u32);
 
-    /// Writes a VarLong (i64) to the packet body.
+    // Writes a VarLong (i64) to the packet body.
     write_variable_integer!(write_varlong, i64, u64);
 
     /// Writes an byte (u8) to the packet body.

@@ -1,11 +1,11 @@
 extern crate egg_mode;
-extern crate tokio;
+extern crate futures;
+
+use self::futures::executor::block_on;
 
 use super::notifier::Error;
 use super::NotifierStrategy;
 use super::Message;
-use self::tokio::runtime::current_thread::block_on_all;
-use std::string::ToString;
 
 pub struct TwitterEggMode {
     token: egg_mode::Token,
@@ -25,10 +25,8 @@ impl TwitterEggMode {
 impl NotifierStrategy for TwitterEggMode {
     fn notify(&self, message: &Message) -> Result<(), Error> {
         let truncated = message.truncate(140);
-        block_on_all(
-            egg_mode::tweet::DraftTweet::new(truncated.body())
-            .send(&self.token)
-        ).map_err(|e| Error::FailedToPostMessage(e.to_string()))?;
+        block_on(egg_mode::tweet::DraftTweet::new(truncated.body().clone()).send(&self.token))
+            .map_err(|e| Error::FailedToPostMessage(e.to_string()))?;
 
         Ok(())
     }

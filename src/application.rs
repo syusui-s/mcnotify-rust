@@ -1,8 +1,8 @@
 use std::{time, thread};
-use notifier::{Message, NotifierStrategy, Error as NotifierError};
-use notifier::twitter_eggmode::TwitterEggMode;
-use status_checker::{StatusChecker, Status, StatusDifference, StatusFormats, FormatError};
-use config::Config;
+use crate::notifier::{Message, NotifierStrategy, Error as NotifierError};
+use crate::notifier::twitter_eggmode::TwitterEggMode;
+use crate::status_checker::{StatusChecker, Status, StatusDifference, StatusFormats, FormatError};
+use crate::config::Config;
 
 pub struct Application {
     config: Config,
