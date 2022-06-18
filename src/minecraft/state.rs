@@ -22,17 +22,13 @@ impl State {
         use self::PacketType as PT;
 
         match id {
-            0 => {
-                match *self {
-                    State::Disconnected  => Err(E::NotSatisfy(State::Connected)),
-                    State::Connected     => Err(E::InvalidPacketId),
-                    State::HandShaking   => Ok(PT::HandShake),
-                    State::HandShakeDone => Ok(PT::List),
-                }
+            0 => match *self {
+                State::Disconnected => Err(E::NotSatisfy(State::Connected)),
+                State::Connected => Err(E::InvalidPacketId),
+                State::HandShaking => Ok(PT::HandShake),
+                State::HandShakeDone => Ok(PT::List),
             },
-            1 => {
-                Ok(PT::PingPong)
-            },
+            1 => Ok(PT::PingPong),
             _ => Err(E::InvalidPacketId),
         }
     }

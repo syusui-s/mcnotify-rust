@@ -1,7 +1,7 @@
-use std::{convert, fmt, ops};
+use crate::minecraft::json_data::status::Player as RawPlayer;
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use crate::minecraft::json_data::status::Player as RawPlayer;
+use std::{convert, fmt, ops};
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Player {
@@ -11,13 +11,19 @@ pub struct Player {
 
 impl convert::From<RawPlayer> for Player {
     fn from(player: RawPlayer) -> Self {
-        Self { id: player.id, name: player.name }
+        Self {
+            id: player.id,
+            name: player.name,
+        }
     }
 }
 
 impl Player {
     pub fn new(id: &str, name: &str) -> Self {
-        Self { id: id.to_owned(), name: name.to_owned() }
+        Self {
+            id: id.to_owned(),
+            name: name.to_owned(),
+        }
     }
 
     pub fn id(&self) -> &String {
@@ -31,7 +37,7 @@ impl Player {
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct Players {
-    players: HashSet<Player>
+    players: HashSet<Player>,
 }
 
 impl convert::From<Vec<RawPlayer>> for Players {
@@ -55,7 +61,7 @@ impl FromIterator<RawPlayer> for Players {
 impl FromIterator<Player> for Players {
     fn from_iter<I: IntoIterator<Item = Player>>(iter: I) -> Self {
         Self {
-            players: HashSet::from_iter(iter.into_iter())
+            players: HashSet::from_iter(iter.into_iter()),
         }
     }
 }
@@ -71,7 +77,9 @@ impl<'a, 'b> ops::Sub<&'b Players> for &'a Players {
 
 impl fmt::Display for Players {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut players : Vec<String> = self.players.iter()
+        let mut players: Vec<String> = self
+            .players
+            .iter()
             .map(|player| player.name().clone())
             .collect();
 
@@ -99,7 +107,7 @@ mod tests {
 
     #[test]
     fn test_players_format() {
-        let players = Players::from( vec![
+        let players = Players::from(vec![
             Player::new("idA", "A"),
             Player::new("idB", "B"),
             Player::new("idC", "C"),
@@ -114,15 +122,10 @@ mod tests {
             Player::new("idB", "B"),
             Player::new("idC", "C"),
         ]);
-        let players_rhs = Players::from(vec![
-            Player::new("idC", "C"),
-        ]);
+        let players_rhs = Players::from(vec![Player::new("idC", "C")]);
 
         let actual = &players_lhs - &players_rhs;
-        let expected = Players::from(vec![
-            Player::new("idA", "A"),
-            Player::new("idB", "B"),
-        ]);
+        let expected = Players::from(vec![Player::new("idA", "A"), Player::new("idB", "B")]);
 
         assert_eq!(actual, expected);
     }

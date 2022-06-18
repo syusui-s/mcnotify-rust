@@ -1,8 +1,8 @@
-use std::{time, thread};
-use crate::notifier::{Message, NotifierStrategy, Error as NotifierError};
-use crate::notifier::twitter_eggmode::TwitterEggMode;
-use crate::status_checker::{StatusChecker, Status, StatusDifference, StatusFormats, FormatError};
 use crate::config::Config;
+use crate::notifier::twitter_eggmode::TwitterEggMode;
+use crate::notifier::{Error as NotifierError, Message, NotifierStrategy};
+use crate::status_checker::{FormatError, Status, StatusChecker, StatusDifference, StatusFormats};
+use std::{thread, time};
 
 pub struct Application {
     config: Config,
@@ -19,21 +19,22 @@ impl Application {
             &config_twitter.consumer_key,
             &config_twitter.consumer_secret,
             &config_twitter.access_key,
-            &config_twitter.access_secret
-            );
+            &config_twitter.access_secret,
+        );
 
         let config_formats = &self.config.formats;
         let status_formats = StatusFormats {
             recover_msg: config_formats.recover_msg.clone(),
-            down_msg:    config_formats.down_msg.clone(),
-            join_fmt:    config_formats.join_fmt.clone(),
-            leave_fmt:   config_formats.leave_fmt.clone(),
+            down_msg: config_formats.down_msg.clone(),
+            join_fmt: config_formats.join_fmt.clone(),
+            leave_fmt: config_formats.leave_fmt.clone(),
             players_fmt: config_formats.players_fmt.clone(),
-            time_fmt:    config_formats.time_fmt.clone(),
+            time_fmt: config_formats.time_fmt.clone(),
         };
 
         let interval = time::Duration::from_secs(self.config.mcnotify.check_interval as u64);
-        let mut status_checker = StatusChecker::new(&self.config.address.hostname, self.config.address.port);
+        let mut status_checker =
+            StatusChecker::new(&self.config.address.hostname, self.config.address.port);
 
         info!("Start checking.");
 
@@ -46,8 +47,9 @@ impl Application {
     fn check_and_notify<S>(
         status_checker: &mut StatusChecker,
         status_formats: &StatusFormats,
-        notifier_strategy: &S)
-        where S: NotifierStrategy
+        notifier_strategy: &S,
+    ) where
+        S: NotifierStrategy,
     {
         let status_difference = status_checker.get_status_difference();
 
@@ -55,11 +57,13 @@ impl Application {
             &StatusDifference::Down { ref reason } => {
                 error!("Server is down: {}", reason);
                 return;
-            },
-            &StatusDifference::None { latest_status: Status::Unavailable { ref reason } } => {
+            }
+            &StatusDifference::None {
+                latest_status: Status::Unavailable { ref reason },
+            } => {
                 error!("Server is unavailable: {}", reason);
                 return;
-            },
+            }
             _ => {}
         }
 
@@ -78,9 +82,10 @@ impl Application {
         };
 
         match notifier_strategy.notify(&Message::new(&message)) {
-            Ok(()) => {},
-            Err(NotifierError::FailedToPostMessage(ref msg)) =>
-                error!("Failed to notify. {:?}", msg),
+            Ok(()) => {}
+            Err(NotifierError::FailedToPostMessage(ref msg)) => {
+                error!("Failed to notify. {:?}", msg)
+            }
         }
     }
 }

@@ -1,9 +1,9 @@
-use std::{io, vec, convert};
-use std::net::{TcpStream, ToSocketAddrs, SocketAddr, Shutdown};
-use super::{packet,packet_rw,data_rw,state,json_data};
+use super::packet::*;
 use super::packet_rw::{ReadPacket, WritePacket};
 use super::state::State;
-use super::packet::*;
+use super::{data_rw, json_data, packet, packet_rw, state};
+use std::net::{Shutdown, SocketAddr, TcpStream, ToSocketAddrs};
+use std::{convert, io, vec};
 
 #[derive(Debug)]
 pub enum Error {
@@ -32,12 +32,18 @@ pub struct ServerAddr {
 
 impl ServerAddr {
     pub fn new(hostname: &str, port: u16) -> Self {
-        Self { hostname: hostname.into(), port }
+        Self {
+            hostname: hostname.into(),
+            port,
+        }
     }
 
     /// a port number will be set to default value, 25565.
     pub fn from_hostname(hostname: &str) -> Self {
-        Self { hostname: hostname.into(), port: 25565 }
+        Self {
+            hostname: hostname.into(),
+            port: 25565,
+        }
     }
 }
 
@@ -64,9 +70,15 @@ impl<'a> ToServerAddr for &'a str {
 
         if self.contains(":") {
             let mut iter = self.rsplitn(2, ':');
-            let port_str = iter.next().ok_or(AddressConvertError("invalid port number".to_owned()))?;
-            let hostname = iter.next().ok_or(AddressConvertError("invalid hostname".to_owned()))?;
-            let port : u16 = port_str.parse().map_err(|_| AddressConvertError("invalid port number, parse failed".to_owned()))?;
+            let port_str = iter
+                .next()
+                .ok_or(AddressConvertError("invalid port number".to_owned()))?;
+            let hostname = iter
+                .next()
+                .ok_or(AddressConvertError("invalid hostname".to_owned()))?;
+            let port: u16 = port_str
+                .parse()
+                .map_err(|_| AddressConvertError("invalid port number, parse failed".to_owned()))?;
             Ok(ServerAddr::new(hostname, port))
         } else {
             Ok(ServerAddr::from_hostname(&self))
@@ -81,24 +93,32 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn connect<A : ToServerAddr>(addr: A) -> Result<Self, Error> {
+    pub fn connect<A: ToServerAddr>(addr: A) -> Result<Self, Error> {
         let server_addr = addr.to_server_addr()?;
-        let stream = TcpStream::connect(&server_addr)
-            .map_err(|err| Error::ConnectionError(err))?;
+        let stream = TcpStream::connect(&server_addr).map_err(|err| Error::ConnectionError(err))?;
 
         stream.set_read_timeout(None)?;
 
-        Ok( Client { server_addr, state: State::HandShaking, stream: stream } )
+        Ok(Client {
+            server_addr,
+            state: State::HandShaking,
+            stream: stream,
+        })
     }
 
     pub fn handshake(&mut self, next_state: NextState) -> Result<(), Error> {
-        const SUPPORTED_VERSION : i32 = 335;
+        const SUPPORTED_VERSION: i32 = 335;
 
         if self.state != State::HandShaking {
             return Err(Error::from(state::Error::AlreadyDone(State::HandShaking)));
         }
 
-        let packet = HandShakePacket::new(SUPPORTED_VERSION, &self.server_addr.hostname, self.server_addr.port, next_state);
+        let packet = HandShakePacket::new(
+            SUPPORTED_VERSION,
+            &self.server_addr.hostname,
+            self.server_addr.port,
+            next_state,
+        );
         self.stream.write_packet(&packet)?;
 
         self.state = State::HandShakeDone;

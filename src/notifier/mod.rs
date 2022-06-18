@@ -1,7 +1,7 @@
-mod notifier;
 mod message;
+mod notifier;
 
 pub mod twitter_eggmode;
 
-pub use self::notifier::{NotifierStrategy, Error};
 pub use self::message::Message;
+pub use self::notifier::{Error, NotifierStrategy};

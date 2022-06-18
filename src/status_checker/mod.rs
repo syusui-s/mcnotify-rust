@@ -1,5 +1,5 @@
 mod checker;
 mod formats;
 
-pub use self::checker::{StatusDifference, StatusChecker, Status};
-pub use self::formats::{StatusFormats, Error as FormatError};
+pub use self::checker::{Status, StatusChecker, StatusDifference};
+pub use self::formats::{Error as FormatError, StatusFormats};

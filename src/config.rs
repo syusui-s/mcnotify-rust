@@ -1,10 +1,10 @@
+extern crate toml;
 #[cfg(unix)]
 extern crate xdg_basedir;
-extern crate toml;
 
+use std::convert;
 #[cfg(unix)]
 use std::io;
-use std::convert;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
@@ -68,8 +68,8 @@ pub struct TwitterConfig {
 
 impl Config {
     pub fn read_path(path: &Path) -> Result<Config, Error> {
-        use std::io::Read;
         use std::fs::File;
+        use std::io::Read;
 
         let mut file = File::open(path)?;
 
@@ -105,8 +105,8 @@ impl Config {
     }
 
     fn build_config_path(pathbuf: &mut PathBuf) -> &Path {
-        const CONFIG_DIR  : &str = "mcnotify";
-        const CONFIG_PATH : &str = "config.toml";
+        const CONFIG_DIR: &str = "mcnotify";
+        const CONFIG_PATH: &str = "config.toml";
 
         pathbuf.push(CONFIG_DIR);
         pathbuf.push(CONFIG_PATH);

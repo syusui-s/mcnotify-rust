@@ -5,7 +5,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use self::serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
+use self::serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
@@ -54,7 +54,9 @@ pub mod chat {
         type Err = ();
 
         fn from_str(text: &str) -> Result<Self, ()> {
-            Ok(Chat { text: text.to_owned() })
+            Ok(Chat {
+                text: text.to_owned(),
+            })
         }
     }
 }

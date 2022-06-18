@@ -1,11 +1,11 @@
 extern crate chrono;
 extern crate strfmt;
 
-use std::convert;
-use std::collections::HashMap;
 use self::strfmt::Format;
-use crate::status_checker::StatusDifference;
 use crate::models::Players;
+use crate::status_checker::StatusDifference;
+use std::collections::HashMap;
+use std::convert;
 
 #[derive(Debug)]
 pub enum Error {
@@ -37,37 +37,49 @@ impl StatusFormats {
 
         // join / leave
         match status_difference {
-            &PlayerChange { ref joined_players, ref left_players, .. } => {
+            &PlayerChange {
+                ref joined_players,
+                ref left_players,
+                ..
+            } => {
                 self.format_join(&mut buffer, joined_players)?;
                 self.format_leave(&mut buffer, left_players)?;
             }
             &Recover { .. } => {
                 buffer.push_str(&self.recover_msg);
                 buffer.push('\n');
-            },
+            }
             &Down { .. } => {
                 buffer.push_str(&self.down_msg);
-            },
+            }
             &None { .. } => {
                 return Ok(Option::None);
                 // do nothing
-            },
+            }
         }
 
         // current players
         match status_difference {
-            &PlayerChange { online_count, ref current_players, .. } |
-            &Recover      { online_count, ref current_players, .. } => {
+            &PlayerChange {
+                online_count,
+                ref current_players,
+                ..
+            }
+            | &Recover {
+                online_count,
+                ref current_players,
+                ..
+            } => {
                 self.format_current_players(&mut buffer, online_count, current_players)?;
-            },
-            _ => { },
+            }
+            _ => {}
         };
 
         Ok(Some(buffer))
     }
 
     fn format_time(&self, buffer: &mut String) {
-        if ! self.time_fmt.is_empty() {
+        if !self.time_fmt.is_empty() {
             let current_time = chrono::Local::now();
             let formatted_time = current_time.format(&self.time_fmt);
             buffer.push_str(&formatted_time.to_string());
@@ -76,7 +88,7 @@ impl StatusFormats {
     }
 
     fn format_join(&self, buffer: &mut String, players: &Players) -> Result<(), Error> {
-        if ! players.is_empty() {
+        if !players.is_empty() {
             Self::build_players(buffer, &self.join_fmt, players)?;
             buffer.push('\n');
         }
@@ -84,14 +96,19 @@ impl StatusFormats {
     }
 
     fn format_leave(&self, buffer: &mut String, players: &Players) -> Result<(), Error> {
-        if ! players.is_empty() {
+        if !players.is_empty() {
             Self::build_players(buffer, &self.leave_fmt, players)?;
             buffer.push('\n');
         }
         Ok(())
     }
 
-    fn format_current_players(&self, buffer: &mut String, online_count: u32, players: &Players) -> Result<(), Error> {
+    fn format_current_players(
+        &self,
+        buffer: &mut String,
+        online_count: u32,
+        players: &Players,
+    ) -> Result<(), Error> {
         let mut hashmap = HashMap::new();
         hashmap.insert("count".to_owned(), online_count.to_string());
         Self::build_players_hashmap(buffer, &mut hashmap, &self.players_fmt, players)
@@ -102,11 +119,12 @@ impl StatusFormats {
         Self::build_players_hashmap(buffer, &mut hashmap, fmt, players)
     }
 
-    fn build_players_hashmap(buffer: &mut String,
-                             hashmap: &mut HashMap<String, String>,
-                             fmt: &str,
-                             players: &Players) -> Result<(), Error>
-    {
+    fn build_players_hashmap(
+        buffer: &mut String,
+        hashmap: &mut HashMap<String, String>,
+        fmt: &str,
+        players: &Players,
+    ) -> Result<(), Error> {
         hashmap.insert("players".to_owned(), format!("{}", players));
         buffer.push_str(&fmt.format(&hashmap)?);
         Ok(())
@@ -121,11 +139,11 @@ mod tests {
     fn setup_format() -> StatusFormats {
         let format = StatusFormats {
             recover_msg: "recovered".to_owned(),
-            down_msg:    "down".to_owned(),
-            join_fmt:    "{players}".to_owned(),
-            leave_fmt:   "{players}".to_owned(),
+            down_msg: "down".to_owned(),
+            join_fmt: "{players}".to_owned(),
+            leave_fmt: "{players}".to_owned(),
             players_fmt: "{players} {count}".to_owned(),
-            time_fmt:    "[]".to_owned(),
+            time_fmt: "[]".to_owned(),
         };
 
         format
@@ -142,16 +160,14 @@ mod tests {
                 Player::new("idB", "B"),
                 Player::new("idC", "C"),
             ]),
-            joined_players: Players::from(vec![
-                Player::new("idA", "A"),
-                Player::new("idB", "B"),
-            ]),
-            left_players: Players::from(vec![
-                Player::new("idD", "D"),
-            ]),
+            joined_players: Players::from(vec![Player::new("idA", "A"), Player::new("idB", "B")]),
+            left_players: Players::from(vec![Player::new("idD", "D")]),
         };
 
-        assert_eq!(&format.format(&recover).unwrap().unwrap(), "[]\nA, B\nD\nA, B, C 3");
+        assert_eq!(
+            &format.format(&recover).unwrap().unwrap(),
+            "[]\nA, B\nD\nA, B, C 3"
+        );
     }
 
     #[test]
@@ -167,14 +183,19 @@ mod tests {
             ]),
         };
 
-        assert_eq!(&format.format(&message).unwrap().unwrap(), "[]\nrecovered\nA, B, C 3");
+        assert_eq!(
+            &format.format(&message).unwrap().unwrap(),
+            "[]\nrecovered\nA, B, C 3"
+        );
     }
 
     #[test]
     fn status_format_down() {
         let format = setup_format();
 
-        let message = StatusDifference::Down { reason: String::from("hoge") };
+        let message = StatusDifference::Down {
+            reason: String::from("hoge"),
+        };
         assert_eq!(&format.format(&message).unwrap().unwrap(), "[]\ndown");
     }
 }

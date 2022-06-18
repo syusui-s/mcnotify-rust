@@ -8,7 +8,9 @@ pub enum Status {
         online_count: u32,
         current_players: Players,
     },
-    Unavailable { reason: String },
+    Unavailable {
+        reason: String,
+    },
 }
 
 pub enum StatusDifference {
@@ -24,8 +26,12 @@ pub enum StatusDifference {
         online_count: u32,
         current_players: Players,
     },
-    Down { reason: String },
-    None { latest_status: Status },
+    Down {
+        reason: String,
+    },
+    None {
+        latest_status: Status,
+    },
 }
 
 impl StatusDifference {
@@ -34,23 +40,33 @@ impl StatusDifference {
         use self::StatusDifference::*;
 
         match (latest_status, current_status) {
-            (&Unavailable { .. },
-             &Unavailable { .. }) => {
-                None { latest_status: current_status.clone() }
-            }
-            (&Unavailable { .. },
-             &Available { online_count, ref current_players, ..  }) => {
-                Recover {
-                    online_count,
-                    current_players: current_players.clone(),
-                }
-            }
-            (&Available { .. },
-             &Unavailable { ref reason }) => {
-                Down { reason: reason.clone() }
+            (&Unavailable { .. }, &Unavailable { .. }) => None {
+                latest_status: current_status.clone(),
             },
-            (&Available { current_players: ref latest_players, .. },
-             &Available { online_count, ref current_players, }) => {
+            (
+                &Unavailable { .. },
+                &Available {
+                    online_count,
+                    ref current_players,
+                    ..
+                },
+            ) => Recover {
+                online_count,
+                current_players: current_players.clone(),
+            },
+            (&Available { .. }, &Unavailable { ref reason }) => Down {
+                reason: reason.clone(),
+            },
+            (
+                &Available {
+                    current_players: ref latest_players,
+                    ..
+                },
+                &Available {
+                    online_count,
+                    ref current_players,
+                },
+            ) => {
                 let joined_players = current_players - latest_players;
                 let left_players = latest_players - current_players;
 
@@ -62,7 +78,9 @@ impl StatusDifference {
                         left_players,
                     }
                 } else {
-                    None { latest_status: latest_status.clone() }
+                    None {
+                        latest_status: latest_status.clone(),
+                    }
                 }
             }
         }
@@ -80,7 +98,9 @@ impl StatusChecker {
         Self {
             hostname: hostname.to_owned(),
             port,
-            latest_status: Status::Unavailable { reason: "on start".to_owned() },
+            latest_status: Status::Unavailable {
+                reason: "on start".to_owned(),
+            },
         }
     }
 
@@ -119,7 +139,9 @@ impl StatusChecker {
         let status = match cli.list() {
             Ok(res) => res,
             Err(e) => {
-                return Status::Unavailable { reason: format!("List Request was failed : {:?}", e) };
+                return Status::Unavailable {
+                    reason: format!("List Request was failed : {:?}", e),
+                };
             }
         };
 

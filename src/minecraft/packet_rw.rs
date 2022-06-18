@@ -1,9 +1,9 @@
-use std::{io, convert};
-use std::io::{Read, Write, Cursor};
-use super::{packet, data_rw, state};
 use super::data_rw::{ReadPacketData, WritePacketData};
-use super::state::State;
 use super::packet::*;
+use super::state::State;
+use super::{data_rw, packet, state};
+use std::io::{Cursor, Read, Write};
+use std::{convert, io};
 
 #[derive(Debug)]
 pub enum Error {
@@ -21,16 +21,21 @@ impl_convert_for_error!(state::Error, Error::StateError);
 
 pub trait WritePacket {
     fn write_general_packet(&mut self, packet: &GeneralPacket) -> Result<(), Error>;
-    fn write_packet<P>(&mut self, packet: &P) -> Result<(), Error> where P: ToGeneralPacket;
+    fn write_packet<P>(&mut self, packet: &P) -> Result<(), Error>
+    where
+        P: ToGeneralPacket;
 }
 
 pub trait ReadPacket {
     fn read_general_packet(&mut self, state: State) -> Result<GeneralPacket, Error>;
-    fn read_packet<P>(&mut self, state: State) -> Result<P, Error> where P: FromGeneralPacket;
+    fn read_packet<P>(&mut self, state: State) -> Result<P, Error>
+    where
+        P: FromGeneralPacket;
 }
 
 impl<T> WritePacket for T
-    where T: Write
+where
+    T: Write,
 {
     fn write_general_packet(&mut self, packet: &GeneralPacket) -> Result<(), Error> {
         let mut packet_id_buff = Cursor::new(Vec::with_capacity(5));
@@ -48,7 +53,8 @@ impl<T> WritePacket for T
     }
 
     fn write_packet<P>(&mut self, packet: &P) -> Result<(), Error>
-        where P: ToGeneralPacket
+    where
+        P: ToGeneralPacket,
     {
         self.write_general_packet(&packet.to_general_packet()?)?;
 
@@ -57,7 +63,8 @@ impl<T> WritePacket for T
 }
 
 impl<T> ReadPacket for T
-    where T: Read
+where
+    T: Read,
 {
     fn read_general_packet(&mut self, state: State) -> Result<GeneralPacket, Error> {
         // Length
@@ -84,7 +91,8 @@ impl<T> ReadPacket for T
     }
 
     fn read_packet<P>(&mut self, state: State) -> Result<P, Error>
-        where P: FromGeneralPacket
+    where
+        P: FromGeneralPacket,
     {
         let mut general_packet = self.read_general_packet(state)?;
         return P::from_general_packet(&mut general_packet).map_err(|e| Error::from(e));

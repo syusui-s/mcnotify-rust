@@ -1,11 +1,11 @@
 extern crate byteorder;
 
-use std::{io,convert,string};
 use std::io::{Read, Write};
+use std::{convert, io, string};
 
-use self::byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
+use self::byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
-pub const STRING_MAX : usize = 32767;
+pub const STRING_MAX: usize = 32767;
 
 #[derive(Debug)]
 pub enum Error {
@@ -31,7 +31,7 @@ impl convert::From<string::FromUtf8Error> for Error {
 
 pub struct ReadContainer<T> {
     pub content: T,
-    pub read_len: usize
+    pub read_len: usize,
 }
 
 impl<T> ReadContainer<T> {
@@ -41,7 +41,7 @@ impl<T> ReadContainer<T> {
 }
 
 type WriteResult = Result<(), Error>;
-type ReadResult<T>  = Result<ReadContainer<T>, Error>;
+type ReadResult<T> = Result<ReadContainer<T>, Error>;
 
 pub trait WritePacketData {
     fn write_varint(&mut self, value: i32) -> WriteResult;
@@ -63,7 +63,7 @@ pub trait ReadPacketData {
 }
 
 macro_rules! write_variable_integer {
-    ($name:ident, $signed:ty, $unsigned:ty) => (
+    ($name:ident, $signed:ty, $unsigned:ty) => {
         fn $name(&mut self, value: $signed) -> WriteResult {
             let mut uval = value as $unsigned;
 
@@ -77,17 +77,22 @@ macro_rules! write_variable_integer {
 
                 self.write(&[tmp])?;
 
-                if uval == 0 { break; }
+                if uval == 0 {
+                    break;
+                }
             }
 
             Ok(())
         }
-    );
+    };
 }
 
-impl<T> WritePacketData for T where T: Write {
+impl<T> WritePacketData for T
+where
+    T: Write,
+{
     // Writes a VarInt (i32) to the packet body.
-    write_variable_integer!(write_varint,  i32, u32);
+    write_variable_integer!(write_varint, i32, u32);
 
     // Writes a VarLong (i64) to the packet body.
     write_variable_integer!(write_varlong, i64, u64);
@@ -130,11 +135,11 @@ impl<T> WritePacketData for T where T: Write {
 }
 
 macro_rules! read_variable_integer {
-    ($name:ident, $t:ty, $max_len:expr, $err_too_short:path, $err_too_long:path) => (
+    ($name:ident, $t:ty, $max_len:expr, $err_too_short:path, $err_too_long:path) => {
         fn $name(&mut self) -> ReadResult<$t> {
-            let mut result : $t = 0;
+            let mut result: $t = 0;
 
-            let mut count : usize = 0;
+            let mut count: usize = 0;
             loop {
                 let read = self.read_byte()?.content;
                 let value = (read & 0b_0111_1111) as $t;
@@ -152,12 +157,27 @@ macro_rules! read_variable_integer {
 
             Ok(ReadContainer::new(result, count))
         }
-    );
+    };
 }
 
-impl<T> ReadPacketData for T where T: Read {
-    read_variable_integer!(read_varint,  i32,  5_usize, Error::VarIntIsTooShort,  Error::VarIntIsTooLong);
-    read_variable_integer!(read_varlong, i64, 10_usize, Error::VarLongIsTooShort, Error::VarLongIsTooLong);
+impl<T> ReadPacketData for T
+where
+    T: Read,
+{
+    read_variable_integer!(
+        read_varint,
+        i32,
+        5_usize,
+        Error::VarIntIsTooShort,
+        Error::VarIntIsTooLong
+    );
+    read_variable_integer!(
+        read_varlong,
+        i64,
+        10_usize,
+        Error::VarLongIsTooShort,
+        Error::VarLongIsTooLong
+    );
 
     fn read_byte(&mut self) -> ReadResult<u8> {
         let result = self.read_u8()?;
@@ -183,7 +203,7 @@ impl<T> ReadPacketData for T where T: Read {
         let len = len_container.content as usize;
 
         if max_len > STRING_MAX {
-            return Err(Error::MaxStringLenIsTooLong)
+            return Err(Error::MaxStringLenIsTooLong);
         }
 
         if (len > max_len) || (len > STRING_MAX) {
@@ -205,43 +225,77 @@ impl<T> ReadPacketData for T where T: Read {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Seek, SeekFrom, Cursor};
     use super::*;
+    use std::io::{Cursor, Seek, SeekFrom};
 
-    const VARINT_DATA : [(i32, &'static [u8]); 10] = [
-        (          0_i32, &[0x00_u8]),
-        (          1_i32, &[0x01_u8]),
-        (          2_i32, &[0x02_u8]),
-        (         19_i32, &[0x13_u8]),
-        (        127_i32, &[0x7f_u8]),
-        (        128_i32, &[0x80_u8, 0x01_u8]),
-        (        255_i32, &[0xff_u8, 0x01_u8]),
-        ( 2147483647_i32, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8]),
-        (         -1_i32, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x0f_u8]),
-        (-2147483648_i32, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x08_u8]),
-        ];
-
-    const VARLONG_DATA : [(i64, &'static [u8]); 11] = [
-        (                   0_i64, &[0x00_u8]),
-        (                   1_i64, &[0x01_u8]),
-        (                   2_i64, &[0x02_u8]),
-        (                 127_i64, &[0x7f_u8]),
-        (                 128_i64, &[0x80_u8, 0x01_u8]),
-        (                 255_i64, &[0xff_u8, 0x01_u8]),
-        (          2147483647_i64, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8]),
-        ( 9223372036854775807_i64, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x7f]),
-        (                  -1_i64, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x01]),
-        (         -2147483648_i64, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0xf8_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x01]),
-        (-9223372036854775808_i64, &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x01]),
+    const VARINT_DATA: [(i32, &'static [u8]); 10] = [
+        (0_i32, &[0x00_u8]),
+        (1_i32, &[0x01_u8]),
+        (2_i32, &[0x02_u8]),
+        (19_i32, &[0x13_u8]),
+        (127_i32, &[0x7f_u8]),
+        (128_i32, &[0x80_u8, 0x01_u8]),
+        (255_i32, &[0xff_u8, 0x01_u8]),
+        (
+            2147483647_i32,
+            &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8],
+        ),
+        (-1_i32, &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x0f_u8]),
+        (
+            -2147483648_i32,
+            &[0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x08_u8],
+        ),
     ];
 
-    const STRING_DATA : (&'static str, &'static [u8]) = (
+    const VARLONG_DATA: [(i64, &'static [u8]); 11] = [
+        (0_i64, &[0x00_u8]),
+        (1_i64, &[0x01_u8]),
+        (2_i64, &[0x02_u8]),
+        (127_i64, &[0x7f_u8]),
+        (128_i64, &[0x80_u8, 0x01_u8]),
+        (255_i64, &[0xff_u8, 0x01_u8]),
+        (
+            2147483647_i64,
+            &[0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x07_u8],
+        ),
+        (
+            9223372036854775807_i64,
+            &[
+                0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0x7f,
+            ],
+        ),
+        (
+            -1_i64,
+            &[
+                0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8,
+                0x01,
+            ],
+        ),
+        (
+            -2147483648_i64,
+            &[
+                0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0xf8_u8, 0xff_u8, 0xff_u8, 0xff_u8, 0xff_u8,
+                0x01,
+            ],
+        ),
+        (
+            -9223372036854775808_i64,
+            &[
+                0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8, 0x80_u8,
+                0x01,
+            ],
+        ),
+    ];
+
+    const STRING_DATA: (&'static str, &'static [u8]) = (
         "hello world😆",
-        &[15, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 240, 159, 152, 134]
+        &[
+            15, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 240, 159, 152, 134,
+        ],
     );
 
     macro_rules! test_write_variable_integer {
-        ($name:ident, $f:ident, $cases:tt) => (
+        ($name:ident, $f:ident, $cases:tt) => {
             #[test]
             fn $name() {
                 let mut cursor = Cursor::new(Vec::new());
@@ -253,11 +307,11 @@ mod tests {
                     assert_eq!(cursor.get_ref(), expect);
                 }
             }
-        );
+        };
     }
 
     macro_rules! test_read_variable_integer {
-        ($name:ident, $f:ident, $cases:tt) => (
+        ($name:ident, $f:ident, $cases:tt) => {
             #[test]
             fn $name() {
                 let cases = $cases;
@@ -268,12 +322,12 @@ mod tests {
                     assert_eq!(result.read_len, given.len());
                 }
             }
-        );
+        };
     }
 
-    test_write_variable_integer!(write_varint,  write_varint,  VARINT_DATA);
+    test_write_variable_integer!(write_varint, write_varint, VARINT_DATA);
     test_write_variable_integer!(write_varlong, write_varlong, VARLONG_DATA);
-    test_read_variable_integer!(read_varint,  read_varint,  VARINT_DATA);
+    test_read_variable_integer!(read_varint, read_varint, VARINT_DATA);
     test_read_variable_integer!(read_varlong, read_varlong, VARLONG_DATA);
 
     #[test]
@@ -289,7 +343,10 @@ mod tests {
         let mut cursor = Cursor::new(Vec::new());
 
         cursor.write_string("hello world😆").unwrap();
-        assert_eq!(cursor.get_ref(), &vec![15, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 240, 159, 152, 134]);
+        assert_eq!(
+            cursor.get_ref(),
+            &vec![15, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 240, 159, 152, 134]
+        );
     }
 
     #[test]
