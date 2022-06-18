@@ -6,8 +6,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt
       - name: Format
         run: cargo fmt --all -- --check
+      # TODO: enable clippy
+      # - name: Lint
+      #   run: cargo clippy
       - name: Test
         run: cargo test --all
       - name: Build
