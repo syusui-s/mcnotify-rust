@@ -25,7 +25,8 @@ pub struct Config {
     pub mcnotify: McNotify,
     pub address: Address,
     pub formats: Formats,
-    pub twitter: TwitterConfig,
+    pub twitter: Option<TwitterConfig>,
+    pub ifttt: Option<IFTTTConfig>,
 }
 
 #[derive(Deserialize)]
@@ -64,6 +65,12 @@ pub struct TwitterConfig {
     pub consumer_secret: String,
     pub access_key: String,
     pub access_secret: String,
+}
+
+#[derive(Deserialize)]
+pub struct IFTTTConfig {
+    pub endpoint_url: String,
+    pub truncate: Option<usize>,
 }
 
 impl Config {

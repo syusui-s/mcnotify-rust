@@ -1,6 +1,7 @@
 mod message;
 mod notifier_base;
 
+pub mod ifttt_webhook;
 pub mod twitter_eggmode;
 
 pub use self::message::Message;

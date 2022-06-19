@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::notifier::ifttt_webhook::IFTTTWebhook;
 use crate::notifier::twitter_eggmode::TwitterEggMode;
 use crate::notifier::{Error as NotifierError, Message, NotifierStrategy};
 use crate::status_checker::{FormatError, Status, StatusChecker, StatusDifference, StatusFormats};
@@ -14,13 +15,27 @@ impl Application {
     }
 
     pub fn run(&self) {
-        let config_twitter = &self.config.twitter;
-        let notifier_strategy = TwitterEggMode::new(
-            &config_twitter.consumer_key,
-            &config_twitter.consumer_secret,
-            &config_twitter.access_key,
-            &config_twitter.access_secret,
-        );
+        let mut notifier_strategies: Vec<Box<dyn NotifierStrategy>> = Vec::new();
+
+        if let Some(conf) = &self.config.twitter {
+            let strategy = TwitterEggMode::new(
+                &conf.consumer_key,
+                &conf.consumer_secret,
+                &conf.access_key,
+                &conf.access_secret,
+            );
+            notifier_strategies.push(Box::new(strategy));
+        }
+
+        if let Some(conf) = &self.config.ifttt {
+            let strategy = IFTTTWebhook::new(&conf.endpoint_url, conf.truncate);
+            notifier_strategies.push(Box::new(strategy));
+        }
+
+        if notifier_strategies.is_empty() {
+            error!("No strategies available!");
+            return;
+        }
 
         let config_formats = &self.config.formats;
         let status_formats = StatusFormats {
@@ -39,18 +54,16 @@ impl Application {
         info!("Start checking.");
 
         loop {
-            Self::check_and_notify(&mut status_checker, &status_formats, &notifier_strategy);
+            Self::check_and_notify(&mut status_checker, &status_formats, &notifier_strategies);
             thread::sleep(interval);
         }
     }
 
-    fn check_and_notify<S>(
+    fn check_and_notify(
         status_checker: &mut StatusChecker,
         status_formats: &StatusFormats,
-        notifier_strategy: &S,
-    ) where
-        S: NotifierStrategy,
-    {
+        notifier_strategies: &[Box<dyn NotifierStrategy>],
+    ) {
         let status_difference = status_checker.get_status_difference();
 
         match status_difference {
@@ -81,10 +94,12 @@ impl Application {
             None => return,
         };
 
-        match notifier_strategy.notify(&Message::new(&message)) {
-            Ok(()) => {}
-            Err(NotifierError::FailedToPostMessage(ref msg)) => {
-                error!("Failed to notify. {:?}", msg)
+        for notifier in notifier_strategies.iter() {
+            match notifier.notify(&Message::new(&message)) {
+                Ok(()) => {}
+                Err(NotifierError::FailedToPostMessage(ref msg)) => {
+                    error!("Failed to notify. {:?}", msg)
+                }
             }
         }
     }

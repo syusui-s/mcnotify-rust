@@ -131,7 +131,7 @@ impl Client {
             self.handshake(NextState::Status)?;
         }
 
-        let packet = ListRequestPacket::default();
+        let packet = ListRequestPacket::new();
         self.stream.write_packet(&packet)?;
 
         let packet = self.stream.read_packet::<ListResponsePacket>(self.state)?;

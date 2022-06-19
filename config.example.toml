@@ -19,10 +19,21 @@ leave_fmt   = "🔚{players} left."
 players_fmt = "Online players: {players} ({count} players)"
 time_fmt    = "[%y-%m-%d %H:%M:%S (%Z)]"
 
-# If you want to get notifications on Twitter,
-# configure this section.
+# Twitter
+# ================================================
+# NOTE: API key is NOT provided.
+# You need to acquire API key by your self.
+# https://developer.twitter.com/en/docs/twitter-api
 [twitter]
 consumer_key    = ""
 consumer_secret = ""
 access_key      = ""
 access_secret   = ""
+
+# IFTTT Webhook
+# ================================================
+# https://ifttt.com/maker_webhooks
+# https://ifttt.com/maker_webhooks/triggers/event
+[ifttt]
+endpoint_url = "https://maker.ifttt.com/trigger/___EVENT___/with/key/___WEBHOOK_KEY___"
+truncate     = 140 # (optional)
