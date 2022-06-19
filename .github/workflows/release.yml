@@ -21,4 +21,4 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: binaries/mcnotify.x86_64
+          files: binaries/mcnotify.x86_64-unknown-linux-gnu
