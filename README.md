@@ -44,8 +44,11 @@ Please take a look at `config.example.toml`.
 
 ## How to run
 
+### Normal execution
+
+You can run the binary after the build.
+
 ```console
-$ cargo build --release
 $ ./target/release/mcnotify
 ```
 
@@ -55,7 +58,11 @@ If you want to see a help message, use `--help` options.
 $ mcnotify --help
 ```
 
-mcnotify is not daemon process. You can use nohup, tmux or systemd service to run mcnotify on background.
+## Run in background
+
+mcnotify is NOT daemon process.
+
+You can use nohup, tmux or systemd service to run mcnotify in background.
 
 Systemd service example:
 
@@ -65,9 +72,7 @@ Description=Minecraft Notifier
 
 [Service]
 WorkingDirectory=/
-# You might need to create a user
 User=minecraft
-# /home/minecraft/mcnotify.server_a.toml
 ExecStart=/usr/local/bin/mcnotify -c /home/minecraft/mcnotify.server_a.toml
 Restart=always
 RestartSec=30
