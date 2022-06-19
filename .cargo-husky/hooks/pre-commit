@@ -1,10 +1,10 @@
 #!/bin/sh
 set -xe
 
-cargo check
-
 cargo test --all
 
 cargo fmt --all -- --check
+
+cargo check
 
 cargo clippy
