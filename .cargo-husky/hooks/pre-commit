@@ -6,3 +6,5 @@ cargo check
 cargo test --all
 
 cargo fmt --all -- --check
+
+cargo clippy
