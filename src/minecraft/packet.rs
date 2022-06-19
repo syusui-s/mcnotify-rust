@@ -127,17 +127,12 @@ impl ToGeneralPacket for HandShakePacket {
     }
 }
 
+#[derive(Default)]
 pub struct ListRequestPacket;
 
 impl ListRequestPacket {
     pub fn new() -> Self {
         ListRequestPacket::default()
-    }
-}
-
-impl Default for ListRequestPacket {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
