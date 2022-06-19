@@ -6,40 +6,46 @@ mcnotify-rust: Minecraft status notifier written in Rust
 
 
 ## Overview
-mcnotify send notifications about server status when its change.
 
-will support these informations for notifications:
+Send notifications to Twitter and/or IFTTT when someone joins / leaves the Minecraft server.
 
-* Server stopped or recovered
-* Player joined or left
-* the number of players
+Supported notifications:
+
+* Server stopped / recovered
+* Player join / left
+* Current players and the number of players
 
 Supported services:
 
 * Twitter
 * [IFTTT Maker Channel (Webhook)](https://ifttt.com/maker_webhooks)
-* (Slack)
+
+## Download
+
+Please refer [Releases](https://github.com/syusui-s/mcnotify-rust/releases) to download binaries.
+
+Currently, **ONLY** Linux x86_64 binary is available on Releases page.
+
+If you need a binary for another platforms such as macOS, Windows and RaspberryPi (armhf Linux),
+please try cross-compile.
+
 
 ## How to build
-If you want to cross compile, see <https://blog.rust-lang.org/2016/05/13/rustup.html>.
 
 ```console
 $ cargo build --release
 ```
 
-## How to use
-Currently only twitter notifier is available.
+## How to create the configuration file
 
-1. Create your own app (<https://apps.twitter.com/>)
-	* mcnotify **does NOT** provide consumer key.
-1. Edit your configurations and save it to `~/.config/mcnotify/config.toml` (See `config.example.toml`).
-1. Run.
+The default path is `~/.config/mcnotify/config.toml`.
+
+Please take a look at `config.example.toml`.
 
 ## How to run
-mcnotify is not daemon process. You can use nohup, tmux or systemd service to run mcnotify on background.
 
 ```console
-$ cargo build
+$ cargo build --release
 $ ./target/release/mcnotify
 ```
 
@@ -47,4 +53,26 @@ If you want to see a help message, use `--help` options.
 
 ```console
 $ mcnotify --help
+```
+
+mcnotify is not daemon process. You can use nohup, tmux or systemd service to run mcnotify on background.
+
+Systemd service example:
+
+```systemd
+[Unit]
+Description=Minecraft Notifier
+
+[Service]
+WorkingDirectory=/
+# You might need to create a user
+User=minecraft
+# /home/minecraft/mcnotify.server_a.toml
+ExecStart=/usr/local/bin/mcnotify -c /home/minecraft/mcnotify.server_a.toml
+Restart=always
+RestartSec=30
+Environment=RUST_BACKTRACE=1
+
+[Install]
+WantedBy=multi-user.target
 ```
