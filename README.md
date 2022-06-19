@@ -5,8 +5,6 @@ mcnotify-rust: Minecraft status notifier written in Rust
 [![BuildStatus](https://github.com/syusui-s/mcnotify-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/syusui-s/mcnotify-rust/actions/workflows/ci.yml)
 
 
-**CURRENTLY ALPHA VERSION.**
-
 ## Overview
 mcnotify send notifications about server status when its change.
 
@@ -16,10 +14,10 @@ will support these informations for notifications:
 * Player joined or left
 * the number of players
 
-will support these integrations:
+Supported services:
 
 * Twitter
-* (IFTTT Maker Channel)
+* [IFTTT Maker Channel (Webhook)](https://ifttt.com/maker_webhooks)
 * (Slack)
 
 ## How to build
