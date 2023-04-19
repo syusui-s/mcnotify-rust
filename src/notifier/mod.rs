@@ -2,6 +2,7 @@ mod message;
 mod notifier_base;
 
 pub mod ifttt_webhook;
+pub mod stdout_printer;
 pub mod twitter_eggmode;
 
 pub use self::message::Message;

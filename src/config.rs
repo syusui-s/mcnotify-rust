@@ -27,6 +27,7 @@ pub struct Config {
     pub formats: Formats,
     pub twitter: Option<TwitterConfig>,
     pub ifttt: Option<IFTTTConfig>,
+    pub stdout: Option<StdoutConfig>,
 }
 
 #[derive(Deserialize)]
@@ -72,6 +73,9 @@ pub struct IFTTTConfig {
     pub endpoint_url: String,
     pub truncate: Option<usize>,
 }
+
+#[derive(Deserialize)]
+pub struct StdoutConfig {}
 
 impl Config {
     pub fn read_path(path: &Path) -> Result<Config, Error> {

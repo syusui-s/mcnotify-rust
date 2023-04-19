@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::notifier::ifttt_webhook::IFTTTWebhook;
+use crate::notifier::stdout_printer::StdoutPrinter;
 use crate::notifier::twitter_eggmode::TwitterEggMode;
 use crate::notifier::{Error as NotifierError, Message, NotifierStrategy};
 use crate::status_checker::{FormatError, Status, StatusChecker, StatusDifference, StatusFormats};
@@ -29,6 +30,11 @@ impl Application {
 
         if let Some(conf) = &self.config.ifttt {
             let strategy = IFTTTWebhook::new(&conf.endpoint_url, conf.truncate);
+            notifier_strategies.push(Box::new(strategy));
+        }
+
+        if self.config.stdout.is_some() {
+            let strategy = StdoutPrinter::default();
             notifier_strategies.push(Box::new(strategy));
         }
 
