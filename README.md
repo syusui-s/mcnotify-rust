@@ -7,7 +7,7 @@ mcnotify-rust: Minecraft status notifier written in Rust
 
 ## Overview
 
-Send notifications to Twitter and/or IFTTT when someone joins / leaves the Minecraft server.
+This app sends notifications when someone joins / leaves your Minecraft server (Java version).
 
 Supported notifications:
 
@@ -15,20 +15,20 @@ Supported notifications:
 * Player join / left
 * Current players and the number of players
 
-Supported services:
+Supported notifiers:
 
+* Command
 * Twitter
 * [IFTTT Maker Channel (Webhook)](https://ifttt.com/maker_webhooks)
+* Stdout (in order to see what text will be notified)
 
 ## Download
 
 Please refer [Releases](https://github.com/syusui-s/mcnotify-rust/releases) to download binaries.
 
-Currently, **ONLY** Linux x86_64 binary is available on Releases page.
+Currently, **ONLY** Linux x86_64 binary is available on Releases.
 
-If you need a binary for another platforms such as macOS, Windows and RaspberryPi (armhf Linux),
-please try cross-compile.
-
+If you need a binary for another platforms such as macOS, Windows and RaspberryPi (armhf Linux), please build it by yourself.
 
 ## How to build
 

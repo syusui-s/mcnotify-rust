@@ -19,6 +19,32 @@ leave_fmt   = "🔚{players} left."
 players_fmt = "Online players: {players} ({count} players)"
 time_fmt    = "[%y-%m-%d %H:%M:%S (%Z)]"
 
+# Command Executor
+# ================================================
+# This configuration spawns a process with specified arguments.
+# "{msg}" in `args` is replaced with notification message.
+[command]
+command = "echo"
+args = ["{msg}"]
+pipe = false
+
+# If `pipe` is true, the notification message will be written into stdin of the process.
+#
+# [command]
+# command = "cat"
+# args = []
+# pipe = true
+
+# IFTTT Webhook
+# ================================================
+# This will call the API endpoint of IFTTT Webhook.
+#
+# https://ifttt.com/maker_webhooks
+# https://ifttt.com/maker_webhooks/triggers/event
+[ifttt]
+endpoint_url = "https://maker.ifttt.com/trigger/___EVENT___/with/key/___WEBHOOK_KEY___"
+truncate     = 140 # (optional)
+
 # Twitter
 # ================================================
 # NOTE: API key is NOT provided.
@@ -30,10 +56,7 @@ consumer_secret = ""
 access_key      = ""
 access_secret   = ""
 
-# IFTTT Webhook
+
+# Stdout
 # ================================================
-# https://ifttt.com/maker_webhooks
-# https://ifttt.com/maker_webhooks/triggers/event
-[ifttt]
-endpoint_url = "https://maker.ifttt.com/trigger/___EVENT___/with/key/___WEBHOOK_KEY___"
-truncate     = 140 # (optional)
+[stdout]

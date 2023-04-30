@@ -27,6 +27,7 @@ pub struct Config {
     pub formats: Formats,
     pub twitter: Option<TwitterConfig>,
     pub ifttt: Option<IFTTTConfig>,
+    pub command: Option<CommandConfig>,
     pub stdout: Option<StdoutConfig>,
 }
 
@@ -72,6 +73,13 @@ pub struct TwitterConfig {
 pub struct IFTTTConfig {
     pub endpoint_url: String,
     pub truncate: Option<usize>,
+}
+
+#[derive(Deserialize)]
+pub struct CommandConfig {
+    pub command: String,
+    pub args: Vec<String>,
+    pub pipe: bool,
 }
 
 #[derive(Deserialize)]

@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::notifier::command_executor::CommandExecutor;
 use crate::notifier::ifttt_webhook::IFTTTWebhook;
 use crate::notifier::stdout_printer::StdoutPrinter;
 use crate::notifier::twitter_eggmode::TwitterEggMode;
@@ -30,6 +31,11 @@ impl Application {
 
         if let Some(conf) = &self.config.ifttt {
             let strategy = IFTTTWebhook::new(&conf.endpoint_url, conf.truncate);
+            notifier_strategies.push(Box::new(strategy));
+        }
+
+        if let Some(conf) = &self.config.command {
+            let strategy = CommandExecutor::new(&conf.command, conf.args.clone(), conf.pipe);
             notifier_strategies.push(Box::new(strategy));
         }
 
